@@ -17,6 +17,10 @@ However, reusing Corundum code base for some agile NIC experimentation is not ea
 
 Fortunately, both two are the key advantages provided by FAST framework. Integrating FAST pipeline within corundum can greatly magnify the convenience brought by Corundum when you mess up with FPGA-based NICs.
 
+#### Source File Locations:
+
+All the source files added on corundum are located at `FECON/fpga/fast`. 
+
 #### How to integrate FAST into Corundum? (the tradeoffs)
 
 Basically, there are two ways to plug FAST inside Corundum: partial plugin && complete plugin.
