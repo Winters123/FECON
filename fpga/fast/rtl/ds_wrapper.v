@@ -59,4 +59,16 @@ module ds_wrapper #(
     output wire         pktout_ready
 );
 
+//except tkeep, and fast_valid_wr, we can just wrap everything else.
+//TX path
+assign pktin_data = tx_axis_tdata_int;
+assign pktin_data_wr = tx_axis_tvalid_int;
+assign pktin_data_valid = tx_axis_tvalid_int;
+assign tx_axis_tkeep_int_out = tx_axis_tkeep_int_in;
+assign pktin_data_valid_wr = tx_axis_tvalid_int;
+assign tx_axis_tready_int = pktin_ready;
+
+//MD is a bit of tricky here
+
+
 endmodule

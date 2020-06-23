@@ -19,9 +19,9 @@
 //                     Revision List
 //*************************************************************
 //	rn1: 
-//      date:  2018/08/24
-//      modifier: 
-//      description: 
+//      date:  2020/06/22
+//      modifier: Yang Xiangrui
+//      description: adapt to corundum
 ///////////////////////////////////////////////////////////////// 
 
 module um #(
@@ -149,28 +149,28 @@ wire cin_gac_ready;
 
 //localbus
 //gpp
-reg cfg2gpp_cs_n;
-wire gpp2cfg_ack_n;
-reg cfg2gpp_rw;
-reg [31:0] cfg2gpp_addr;
-reg [31:0] cfg2gpp_wdata;
-wire [31:0] gpp2cfg_rdata;
+// reg cfg2gpp_cs_n;
+// wire gpp2cfg_ack_n;
+// reg cfg2gpp_rw;
+// reg [31:0] cfg2gpp_addr;
+// reg [31:0] cfg2gpp_wdata;
+// wire [31:0] gpp2cfg_rdata;
 
-//gke
-reg cfg2gke_cs_n;
-wire gke2cfg_ack_n;
-reg cfg2gke_rw;
-reg [31:0] cfg2gke_addr;
-reg [31:0] cfg2gke_wdata;
-wire [31:0] gke2cfg_rdata;
+// //gke
+// reg cfg2gke_cs_n;
+// wire gke2cfg_ack_n;
+// reg cfg2gke_rw;
+// reg [31:0] cfg2gke_addr;
+// reg [31:0] cfg2gke_wdata;
+// wire [31:0] gke2cfg_rdata;
 
-//data_cache
-reg cfg2data_cache_cs_n;
-wire data_cache2cfg_ack_n;
-reg cfg2data_cache_rw;
-reg [31:0] cfg2data_cache_addr;
-reg [31:0] cfg2data_cache_wdata;
-wire [31:0] data_cache2cfg_rdata;
+// //data_cache
+// reg cfg2data_cache_cs_n;
+// wire data_cache2cfg_ack_n;
+// reg cfg2data_cache_rw;
+// reg [31:0] cfg2data_cache_addr;
+// reg [31:0] cfg2data_cache_wdata;
+// wire [31:0] data_cache2cfg_rdata;
 
 //gme
 reg cfg2gme_cs_n;
@@ -224,21 +224,21 @@ always @(posedge clk or negedge rst_n) begin
     if(rst_n == 1'b0) begin
         um2ctrl_ack_n <= 1'b1;
         ctrl_dataout <= 32'b0;
-		//gpp
-        cfg2gpp_cs_n <= 1'b1; 
-		cfg2gpp_rw <= 1'b0;
-		cfg2gpp_wdata <= 32'b0;
-		cfg2gpp_addr <= 32'b0;
-		//data_cache
-        cfg2data_cache_cs_n <= 1'b1; 
-		cfg2data_cache_rw <= 1'b0;
-		cfg2data_cache_wdata <= 32'b0;
-		cfg2data_cache_addr <= 32'b0;
-		//gke
-        cfg2gke_cs_n <= 1'b1; 
-		cfg2gke_rw <= 1'b0;
-		cfg2gke_wdata <= 32'b0;
-		cfg2gke_addr <= 32'b0;
+		// //gpp
+        // cfg2gpp_cs_n <= 1'b1; 
+		// cfg2gpp_rw <= 1'b0;
+		// cfg2gpp_wdata <= 32'b0;
+		// cfg2gpp_addr <= 32'b0;
+		// //data_cache
+        // cfg2data_cache_cs_n <= 1'b1; 
+		// cfg2data_cache_rw <= 1'b0;
+		// cfg2data_cache_wdata <= 32'b0;
+		// cfg2data_cache_addr <= 32'b0;
+		// //gke
+        // cfg2gke_cs_n <= 1'b1; 
+		// cfg2gke_rw <= 1'b0;
+		// cfg2gke_wdata <= 32'b0;
+		// cfg2gke_addr <= 32'b0;
 		//gme
         cfg2gme_cs_n <= 1'b1; 
 		cfg2gme_rw <= 1'b0;
@@ -261,25 +261,26 @@ always @(posedge clk or negedge rst_n) begin
         case(cfg_state)
             IDLE_S: begin
                 um2ctrl_ack_n <= 1'b1;
-				cfg2gpp_cs_n <= 1'b1;
-				cfg2data_cache_cs_n <= 1'b1;
-				cfg2gke_cs_n <= 1'b1;
+				// cfg2gpp_cs_n <= 1'b1;
+				// cfg2data_cache_cs_n <= 1'b1;
+				// cfg2gke_cs_n <= 1'b1;
 				cfg2gme_cs_n <= 1'b1;
 				cfg2gac_cs_n <= 1'b1;
 				cfg2goe_cs_n <= 1'b1;
-                if((cfg_valid == 1'b1) && ({gpp2cfg_ack_n,data_cache2cfg_ack_n,gke2cfg_ack_n,gme2cfg_ack_n,gac2cfg_ack_n,goe2cfg_ack_n} == 6'b111111)) begin
-                    //gpp
-					cfg2gpp_rw <= ctrl_cmd;
-					cfg2gpp_addr <= ctrl_addr;
-					cfg2gpp_wdata <= ctrl_datain;
-                    //data_cache
-					cfg2data_cache_rw <= ctrl_cmd;
-					cfg2data_cache_addr <= ctrl_addr;
-					cfg2data_cache_wdata <= ctrl_datain;
-                    //gke
-					cfg2gke_rw <= ctrl_cmd;
-					cfg2gke_addr <= ctrl_addr;
-					cfg2gke_wdata <= ctrl_datain;
+                // if((cfg_valid == 1'b1) && ({gpp2cfg_ack_n,data_cache2cfg_ack_n,gke2cfg_ack_n,gme2cfg_ack_n,gac2cfg_ack_n,goe2cfg_ack_n} == 6'b111111)) begin
+                if((cfg_valid == 1'b1) && ({gme2cfg_ack_n,gac2cfg_ack_n,goe2cfg_ack_n} == 6'b111111)) begin
+                    // //gpp
+					// cfg2gpp_rw <= ctrl_cmd;
+					// cfg2gpp_addr <= ctrl_addr;
+					// cfg2gpp_wdata <= ctrl_datain;
+                    // //data_cache
+					// cfg2data_cache_rw <= ctrl_cmd;
+					// cfg2data_cache_addr <= ctrl_addr;
+					// cfg2data_cache_wdata <= ctrl_datain;
+                    // //gke
+					// cfg2gke_rw <= ctrl_cmd;
+					// cfg2gke_addr <= ctrl_addr;
+					// cfg2gke_wdata <= ctrl_datain;
 					//gme
                     cfg2gme_rw <= ctrl_cmd;
                     cfg2gme_addr <= ctrl_addr;
@@ -296,17 +297,17 @@ always @(posedge clk or negedge rst_n) begin
                     cfg_state <= PARSE_S;
                 end
                 else begin
-					cfg2gpp_rw <= cfg2gpp_rw;
-					cfg2gpp_addr <= cfg2gpp_addr;
-					cfg2gpp_wdata <= cfg2gpp_wdata;
+					// cfg2gpp_rw <= cfg2gpp_rw;
+					// cfg2gpp_addr <= cfg2gpp_addr;
+					// cfg2gpp_wdata <= cfg2gpp_wdata;
 
-					cfg2data_cache_rw <= cfg2data_cache_rw;
-					cfg2data_cache_addr <= cfg2data_cache_addr;
-					cfg2data_cache_wdata <= cfg2data_cache_wdata;
+					// cfg2data_cache_rw <= cfg2data_cache_rw;
+					// cfg2data_cache_addr <= cfg2data_cache_addr;
+					// cfg2data_cache_wdata <= cfg2data_cache_wdata;
 
-					cfg2gke_rw <= cfg2gke_rw;
-					cfg2gke_addr <= cfg2gke_addr;
-					cfg2gke_wdata <= cfg2gke_wdata;
+					// cfg2gke_rw <= cfg2gke_rw;
+					// cfg2gke_addr <= cfg2gke_addr;
+					// cfg2gke_wdata <= cfg2gke_wdata;
 
                     cfg2gme_rw <= cfg2gme_rw;
                     cfg2gme_addr <= cfg2gme_addr;
@@ -326,16 +327,16 @@ always @(posedge clk or negedge rst_n) begin
             
             PARSE_S: begin
                 case(ctrl_addr[15:13])                                            
-                    3'b000: begin cfg2gpp_cs_n <= 1'b0; cfg_state <= WAIT_ACK_S; end  //gpp
-                    3'b001: begin cfg2data_cache_cs_n <= 1'b0; cfg_state <= WAIT_ACK_S; end  //data_cache
-                    3'b010: begin cfg2gke_cs_n <= 1'b0; cfg_state <= WAIT_ACK_S; end  //gke
+                    // 3'b000: begin cfg2gpp_cs_n <= 1'b0; cfg_state <= WAIT_ACK_S; end  //gpp
+                    // 3'b001: begin cfg2data_cache_cs_n <= 1'b0; cfg_state <= WAIT_ACK_S; end  //data_cache
+                    // 3'b010: begin cfg2gke_cs_n <= 1'b0; cfg_state <= WAIT_ACK_S; end  //gke
 					3'b011: begin cfg2gme_cs_n <= 1'b0; cfg_state <= WAIT_ACK_S; end  //gme
 					3'b100: begin cfg2gac_cs_n <= 1'b0; cfg_state <= WAIT_ACK_S; end  //gac
 					3'b101: begin cfg2goe_cs_n <= 1'b0; cfg_state <= WAIT_ACK_S; end  //goe
                     default: begin
-					    cfg2gpp_cs_n <= 1'b1;
-						cfg2data_cache_cs_n <= 1'b1;
-					    cfg2gke_cs_n <= 1'b1; 
+					    // cfg2gpp_cs_n <= 1'b1;
+						// cfg2data_cache_cs_n <= 1'b1;
+					    // cfg2gke_cs_n <= 1'b1; 
 						cfg2gme_cs_n <= 1'b1;
 						cfg2gac_cs_n <= 1'b1;
 						cfg2goe_cs_n <= 1'b1;
@@ -346,17 +347,19 @@ always @(posedge clk or negedge rst_n) begin
             end
             
             WAIT_ACK_S: begin
-                if((&{gpp2cfg_ack_n,data_cache2cfg_ack_n,gke2cfg_ack_n,gme2cfg_ack_n,gac2cfg_ack_n,goe2cfg_ack_n}) == 1'b0)begin
-                    cfg2gpp_cs_n <= 1'b1;				
-                    cfg2data_cache_cs_n <= 1'b1;
-					cfg2gke_cs_n <= 1'b1;
+                // if((&{gpp2cfg_ack_n,data_cache2cfg_ack_n,gke2cfg_ack_n,gme2cfg_ack_n,gac2cfg_ack_n,goe2cfg_ack_n}) == 1'b0)begin
+                if((&{gme2cfg_ack_n,gac2cfg_ack_n,goe2cfg_ack_n}) == 1'b0)begin
+                    // cfg2gpp_cs_n <= 1'b1;				
+                    // cfg2data_cache_cs_n <= 1'b1;
+					// cfg2gke_cs_n <= 1'b1;
 					cfg2gme_cs_n <= 1'b1;
 					cfg2gac_cs_n <= 1'b1;
 					cfg2goe_cs_n <= 1'b1;
-                    casez({cfg2gpp_cs_n,cfg2data_cache_cs_n,cfg2gke_cs_n,cfg2gme_cs_n,cfg2gac_cs_n,cfg2goe_cs_n})
-					    6'b0?????: ctrl_dataout <= gpp2cfg_rdata;             //gpp
-						6'b10????: ctrl_dataout <= data_cache2cfg_rdata;      //data_cache
-						6'b110???: ctrl_dataout <= gke2cfg_rdata;             //gke
+                    // casez({cfg2gpp_cs_n,cfg2data_cache_cs_n,cfg2gke_cs_n,cfg2gme_cs_n,cfg2gac_cs_n,cfg2goe_cs_n})
+                    casez({cfg2gme_cs_n,cfg2gac_cs_n,cfg2goe_cs_n})
+					    // 6'b0?????: ctrl_dataout <= gpp2cfg_rdata;             //gpp
+						// 6'b10????: ctrl_dataout <= data_cache2cfg_rdata;      //data_cache
+						// 6'b110???: ctrl_dataout <= gke2cfg_rdata;             //gke
 						6'b1110??: ctrl_dataout <= gme2cfg_rdata;             //gme
 						6'b11110?: ctrl_dataout <= gac2cfg_rdata;             //gac
 						6'b111110: ctrl_dataout <= goe2cfg_rdata;             //goe
@@ -365,9 +368,9 @@ always @(posedge clk or negedge rst_n) begin
                     cfg_state <= RELEASE_S;
                 end
                 else begin
-				    cfg2gpp_cs_n <= cfg2gpp_cs_n;
-					cfg2data_cache_cs_n <= cfg2data_cache_cs_n;
-					cfg2gke_cs_n <= cfg2gke_cs_n;
+				    // cfg2gpp_cs_n <= cfg2gpp_cs_n;
+					// cfg2data_cache_cs_n <= cfg2data_cache_cs_n;
+					// cfg2gke_cs_n <= cfg2gke_cs_n;
                     cfg2gme_cs_n <= cfg2gme_cs_n;
 					cfg2gac_cs_n <= cfg2gac_cs_n;
 					cfg2goe_cs_n <= cfg2goe_cs_n;			
@@ -389,21 +392,21 @@ always @(posedge clk or negedge rst_n) begin
             default: begin
                 um2ctrl_ack_n <= 1'b1;
                 ctrl_dataout <= 32'b0;
-		        //gpp
-                cfg2gpp_cs_n <= 1'b1; 
-		        cfg2gpp_rw <= 1'b0;
-		        cfg2gpp_wdata <= 32'b0;
-		        cfg2gpp_addr <= 32'b0;
-		        //data_cache
-                cfg2data_cache_cs_n <= 1'b1; 
-		        cfg2data_cache_rw <= 1'b0;
-		        cfg2data_cache_wdata <= 32'b0;
-		        cfg2data_cache_addr <= 32'b0;
-		        //gke
-                cfg2gke_cs_n <= 1'b1; 
-		        cfg2gke_rw <= 1'b0;
-		        cfg2gke_wdata <= 32'b0;
-		        cfg2gke_addr <= 32'b0;
+		        // //gpp
+                // cfg2gpp_cs_n <= 1'b1; 
+		        // cfg2gpp_rw <= 1'b0;
+		        // cfg2gpp_wdata <= 32'b0;
+		        // cfg2gpp_addr <= 32'b0;
+		        // //data_cache
+                // cfg2data_cache_cs_n <= 1'b1; 
+		        // cfg2data_cache_rw <= 1'b0;
+		        // cfg2data_cache_wdata <= 32'b0;
+		        // cfg2data_cache_addr <= 32'b0;
+		        // //gke
+                // cfg2gke_cs_n <= 1'b1; 
+		        // cfg2gke_rw <= 1'b0;
+		        // cfg2gke_wdata <= 32'b0;
+		        // cfg2gke_addr <= 32'b0;
 		        //gme
                 cfg2gme_cs_n <= 1'b1; 
 		        cfg2gme_rw <= 1'b0;
@@ -462,12 +465,12 @@ gpp #(
 	.in_gpp_data_alf(data_cache2gpp_alf),
 	
 //localbus to gpp
-    .cfg2gpp_cs_n(cfg2gpp_cs_n),
-	.gpp2cfg_ack_n(gpp2cfg_ack_n),
-	.cfg2gpp_rw(cfg2gpp_rw),
-	.cfg2gpp_addr(cfg2gpp_addr),
-	.cfg2gpp_wdata(cfg2gpp_wdata),
-	.gpp2cfg_rdata(gpp2cfg_rdata),
+    // .cfg2gpp_cs_n(cfg2gpp_cs_n),
+	// .gpp2cfg_ack_n(gpp2cfg_ack_n),
+	// .cfg2gpp_rw(cfg2gpp_rw),
+	// .cfg2gpp_addr(cfg2gpp_addr),
+	// .cfg2gpp_wdata(cfg2gpp_wdata),
+	// .gpp2cfg_rdata(gpp2cfg_rdata),
 	
 	.cin_gpp_data(dma2um_data),
 	.cin_gpp_data_wr(dma2um_data_wr),
@@ -494,15 +497,15 @@ data_cache #(
     .out_data_cache_data(data_cache2gac_data),
     .out_data_cache_valid(data_cache2gac_valid),
     .out_data_cache_valid_wr(data_cache2gac_valid_wr),
-    .in_data_cache_alf(gac2data_cache_alf),
+    .in_data_cache_alf(gac2data_cache_alf)
 	
-//localbus to data_cache
-    .cfg2data_cache_cs_n(cfg2data_cache_cs_n),
-	.data_cache2cfg_ack_n(data_cache2cfg_ack_n),
-	.cfg2data_cache_rw(cfg2data_cache_rw),
-	.cfg2data_cache_addr(cfg2data_cache_addr),
-	.cfg2data_cache_wdata(cfg2data_cache_wdata),
-	.data_cache2cfg_rdata(data_cache2cfg_rdata)
+// //localbus to data_cache
+//     .cfg2data_cache_cs_n(cfg2data_cache_cs_n),
+// 	.data_cache2cfg_ack_n(data_cache2cfg_ack_n),
+// 	.cfg2data_cache_rw(cfg2data_cache_rw),
+// 	.cfg2data_cache_addr(cfg2data_cache_addr),
+// 	.cfg2data_cache_wdata(cfg2data_cache_wdata),
+// 	.data_cache2cfg_rdata(data_cache2cfg_rdata)
 );
 
 gke #(
@@ -535,12 +538,12 @@ gke #(
 	.in_gke_phv_alf(gme2gke_phv_alf),
 	
 //localbus to gke
-    .cfg2gke_cs_n(cfg2gke_cs_n),
-	.gke2cfg_ack_n(gke2cfg_ack_n),
-	.cfg2gke_rw(cfg2gke_rw),
-	.cfg2gke_addr(cfg2gke_addr),
-	.cfg2gke_wdata(cfg2gke_wdata),
-	.gke2cfg_rdata(gke2cfg_rdata),
+    // .cfg2gke_cs_n(cfg2gke_cs_n),
+	// .gke2cfg_ack_n(gke2cfg_ack_n),
+	// .cfg2gke_rw(cfg2gke_rw),
+	// .cfg2gke_addr(cfg2gke_addr),
+	// .cfg2gke_wdata(cfg2gke_wdata),
+	// .gke2cfg_rdata(gke2cfg_rdata),
 	
 	.cin_gke_data(cout_gpp_data),
 	.cin_gke_data_wr(cout_gpp_data_wr),
