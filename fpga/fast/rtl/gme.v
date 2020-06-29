@@ -62,6 +62,7 @@ module gme #(
     output reg out_gme_key_wr,
     output reg [511:0] out_gme_key,
     input in_gme_key_alf,
+	
 //localbus to gme
     input cfg2gme_cs_n, //low active
 	output reg gme2cfg_ack_n, //low active
@@ -706,9 +707,3 @@ end
 
 endmodule
    
-
-
-
-
-
-    

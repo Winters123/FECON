@@ -69,12 +69,12 @@ module gke #(
 //****************************************************
 //all wire/reg/parameter variable
 //should be declare below here
- reg [31:0] gke_status;
- reg [31:0] in_gke_md_count;
- reg [31:0] in_gke_phv_count;
- reg [31:0] out_gke_key_count;
- reg [31:0] out_gke_md_count;
- reg [31:0] out_gke_phv_count;
+reg [31:0] gke_status;
+reg [31:0] in_gke_md_count;
+reg [31:0] in_gke_phv_count;
+reg [31:0] out_gke_key_count;
+reg [31:0] out_gke_md_count;
+reg [31:0] out_gke_phv_count;
  	
 reg [47:0]  DMAC;
 reg [47:0]  SMAC;
@@ -118,9 +118,9 @@ always @(posedge clk or negedge rst_n) begin
 		out_gke_phv_wr <= 1'b0;
     end
     else begin
-	     in_gke_md_dly <= in_gke_md;     //Synchronize with key
+	    in_gke_md_dly <= in_gke_md;     //Synchronize with key
         in_gke_md_wr_dly <= in_gke_md_wr;
-		  in_gke_phv_dly <= in_gke_phv;
+		in_gke_phv_dly <= in_gke_phv;
         if((in_gke_md_wr_dly == 1'b1)&&(in_gke_md_dly[87:80] == LMID))begin 
             out_gke_md <= {in_gke_md_dly[255:88],8'd3,in_gke_md_dly[79:0]};
             out_gke_phv <= in_gke_phv_dly;
@@ -150,29 +150,29 @@ end
 
 always @(posedge clk or negedge rst_n) begin
         if(rst_n == 1'b0) begin
-		      DMAC <= 48'b0;
-				SMAC <= 48'b0;
-				TCI <= 16'b0;
-				ETH_TYPE <= 16'b0;
-				IP_PROTO <= 8'b0;
-				TOS <= 8'b0;
-				TTL <= 8'b0;
-				FRAG <= 4'b0;
-				SIP <= 32'b0;
-				DIP <= 32'b0;
-				Src_IP <= 128'b0;
-				Dst_IP <= 128'b0;
-				LABEL <= 32'b0;
-				SPORT <= 16'b0;
-				DPORT <= 16'b0;
-				FLAG <= 16'b0;
-				SHA <= 48'b0;
-				THA <= 48'b0;
-				INPORT <= 6'b0;	
-	
+		    DMAC <= 48'b0;
+		    SMAC <= 48'b0;
+		    TCI <= 16'b0;
+		    ETH_TYPE <= 16'b0;
+		    IP_PROTO <= 8'b0;
+		    TOS <= 8'b0;
+		    TTL <= 8'b0;
+		    FRAG <= 4'b0;
+		    SIP <= 32'b0;
+		    DIP <= 32'b0;
+		    Src_IP <= 128'b0;
+		    Dst_IP <= 128'b0;
+		    LABEL <= 32'b0;
+		    SPORT <= 16'b0;
+		    DPORT <= 16'b0;
+		    FLAG <= 16'b0;
+		    SHA <= 48'b0;
+		    THA <= 48'b0;
+		    INPORT <= 6'b0;	
+
             pst_switch <= 4'hf;			
-		  end
-		  else begin
+		end
+		else begin
 		  if(in_gke_md_wr==1'b1)begin
 		    if(in_gke_md[87:80] == LMID) begin
 		       if((in_gke_phv_wr == 1'b1)&&((in_gke_md[79:72] == 8'b00000001) ||(in_gke_md[79:72] ==8'b00000111))) begin //is_ipv4_tcp or is_ipv4_udp
@@ -237,7 +237,7 @@ always @(posedge clk or negedge rst_n) begin
                 IP_PROTO <= in_gke_phv[863:856];
                 TTL <= in_gke_phv[855:848];
                 FRAG <= 4'b0;
- //             INPORT <= in_gke_md[123:120];  //1.0          
+                //INPORT <= in_gke_md[123:120];  //1.0          
                 INPORT <= in_gke_md[125:120];   //2.0
                 LABEL <= {12'b0,in_gke_phv[899:880]};          
                 Src_IP <= in_gke_phv[847:720];
@@ -256,7 +256,7 @@ always @(posedge clk or negedge rst_n) begin
                 IP_PROTO <= in_gke_phv[863:856];
                 TTL <= in_gke_phv[855:848];
                 FRAG <= 4'b0;
- //             INPORT <= in_gke_md[123:120];   //1.0          
+                //INPORT <= in_gke_md[123:120];   //1.0          
                 INPORT <= in_gke_md[125:120];   //2.0
                 LABEL <= {12'b0,in_gke_phv[899:880]};          
                 Src_IP <= in_gke_phv[847:720];
@@ -297,7 +297,7 @@ always @(posedge clk or negedge rst_n) begin
 			else begin
 			   pst_switch <= 4'hf;
 			end
-		  end       
+		end       
     end
 	 
 //***************************************************
@@ -331,7 +331,7 @@ always @(posedge clk or negedge rst_n) begin
             out_gke_key[239:224] <= SPORT;
             out_gke_key[255:240] <= DPORT;
             out_gke_key[271:256] <= FLAG;			
-			   out_gke_key[511:272] <= 240'b0;
+			out_gke_key[511:272] <= 240'b0;
         end
         else if(pst_switch == 4'd2) begin//is_ipv4
             out_gke_key_wr <= 1'b1;
@@ -349,7 +349,7 @@ always @(posedge clk or negedge rst_n) begin
             out_gke_key[239:224] <= 16'b0;
             out_gke_key[255:240] <= 16'b0;
             out_gke_key[271:256] <= 16'b0;			
-			   out_gke_key[511:272] <= 240'b0;
+			out_gke_key[511:272] <= 240'b0;
         end            
         else if(pst_switch == 4'd3) begin//is_arp
             out_gke_key_wr <= 1'b1;
@@ -366,7 +366,7 @@ always @(posedge clk or negedge rst_n) begin
             out_gke_key[223:192] <= DIP;
             out_gke_key[271:224] <= SHA;
             out_gke_key[319:272] <= THA;			
-			   out_gke_key[511:320] <= 192'b0;
+			out_gke_key[511:320] <= 192'b0;
         end  
         else if(pst_switch == 4'd4) begin//is_ipv6_tcp/udp
             out_gke_key_wr <= 1'b1;

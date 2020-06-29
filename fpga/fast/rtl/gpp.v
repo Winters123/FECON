@@ -20,9 +20,11 @@
 //                     Revision List
 //*************************************************************
 //	rn1: 
-//      date:  2018/08/24
-//      modifier: 
+//      date:  2020/06/27
+//      modifier: Yang Xiangrui
 //      description: 
+//             1) change the data path width from 128 to 256
+//             2) use axis_tuser and axis_tkeep as the replacement.
 ///////////////////////////////////////////////////////////////// 
 
 
@@ -39,6 +41,8 @@ module gpp #(
     input [133:0] pktin_data,
     input pktin_valid_wr,
     input pktin_data_valid,
+    input [1:0]  pktin_axis_tuser,
+    input [31:0] pktin_axis_tkeep,
     output pktin_ready,  	
 //parse MD AND PHV transmit to next module
     output reg [1023:0] out_gpp_phv,
@@ -55,6 +59,8 @@ module gpp #(
     output reg [133:0] out_gpp_data,
     output reg out_gpp_valid_wr,
     output reg out_gpp_valid,
+    output reg [1:0]  out_gpp_axis_tuser,
+    output reg [31:0] out_gpp_axis_tkeep,
     input in_gpp_data_alf,     //data alf
     
 		
@@ -125,9 +131,10 @@ always @(posedge clk or negedge rst_n) begin
     else begin
         case(gpp_state)
             IDLE_S: begin  
-			       out_gpp_valid <= 1'b0;	
+			    out_gpp_valid <= 1'b0;	
                 out_gpp_valid_wr <= 1'b0;
-                if((pktin_data[133:132] == 2'b01)&&(pktin_data_wr==1'b1)) begin
+                //get DMID to check if we need the change.
+                if((pktin_axis_tuser == 2'b01)&&(pktin_data_wr == 1'b1)) begin
                     if((pktin_data[87:80]==8'd1)||(pktin_data[87:80]>8'd4)) begin
                         out_gpp_data_wr <= 1'b1;
                         out_gpp_data <= pktin_data;
@@ -136,14 +143,14 @@ always @(posedge clk or negedge rst_n) begin
                     end 
                     else begin 
                         out_gpp_data_wr <= 1'b0;
-                        out_gpp_data <= 134'b0;
+                        out_gpp_data <= 256'b0;
 						flag <= 1'b0;
                         gpp_state <= DISCARD_S;
                     end
                 end
                 else begin
                     out_gpp_data_wr <= 1'b0;
-                    out_gpp_data <= 134'b0;
+                    out_gpp_data <= 256'b0;
                     gpp_state <= IDLE_S;
                 end
             end
@@ -151,7 +158,7 @@ always @(posedge clk or negedge rst_n) begin
                 out_gpp_data_wr <= 1'b1;
                 out_gpp_data <= pktin_data;
 			    out_gpp_valid <= pktin_data_valid;
-                if(pktin_data[133:132] == 2'b10) begin
+                if(pktin_axis_tuser == 2'b10) begin
                     out_gpp_valid_wr <= 1'b1; 
                     gpp_state <= IDLE_S;
                 end
@@ -161,16 +168,16 @@ always @(posedge clk or negedge rst_n) begin
                 end
             end 
             DISCARD_S: begin 
-					out_gpp_data_wr <= 1'b0;
-					out_gpp_valid_wr <= 1'b0;
-               if(pktin_data[133:132] == 2'b10) begin
-                    gpp_state <= IDLE_S;
-               end 
-               else begin 
-                    gpp_state <= DISCARD_S;
-               end
+				out_gpp_data_wr <= 1'b0;
+				out_gpp_valid_wr <= 1'b0;
+                if(pktin_axis_tuser == 2'b10) begin
+                        gpp_state <= IDLE_S;
+                end 
+                else begin 
+                        gpp_state <= DISCARD_S;
+                end
               end
-          endcase
+        endcase
      end
 end
      	 
@@ -178,11 +185,11 @@ end
 //                 Pkt Step Count
 //***************************************************
 //count the pkt cycle step for locate parse procotol field
-//compare with pkt_step_count, pkt_step count_inc always change advance 1 cycle
+//compare with pkt_step_count, pkt_step_count_inc always change advance 1 cycle
 
 always @* begin 
     if(pktin_data_wr == 1'b1) begin 
-        if(pktin_data[133:132] == 2'b01) begin 
+        if(pktin_axis_tuser == 2'b01) begin 
             pkt_step_count_inc = 8'd0;
         end
 		else begin
@@ -205,32 +212,19 @@ end
 //***************************************************
 //                 MD Field Parse
 //***************************************************
-always @(posedge clk) begin
-    if(rst_n == 1'b0) begin
-	     MD[127:0] = 128'b0;	 
-	 end
-	 else begin
-	    if((pktin_data_wr == 1'b1) && (pkt_step_count_inc == 8'd0)) begin
-		     MD[127:0] <= pktin_data[127:0];
-       end
-       else begin
-           MD[127:0]  <= MD[127:0] ;
-       end 
-	 end   
-end
 
-always @(posedge clk) begin
+always @(posedge clk or negedge rst_n) begin
     if(rst_n == 1'b0) begin
-	     MD[255:128] = 128'b0;	 
-	 end
-	 else begin
-      if((pktin_data_wr == 1'b1) && (pkt_step_count_inc == 8'd1)) begin
-          MD[255:128] <= pktin_data[127:0];
-      end
-      else begin
-          MD[255:128] <= MD[255:128];
-       end
-	 end
+        MD[255:0] = 256'b0;
+    end
+    else begin
+        if((pktin_data_wr == 1'b1) && (pktin_axis_tuser == 2'b01)) begin
+            MD <= pktin_data;
+        end
+        else begin
+            MD <= MD;
+        end
+    end
 end
 
 
@@ -252,58 +246,48 @@ end
 //***************************************************
 
 always @(posedge clk or negedge rst_n) begin 
-	if(!rst_n)begin
+	if(!rst_n) begin
 	    PHV <= 1024'b0;
 		out_gpp_phv <= 1024'b0;
 		out_gpp_phv_wr <= 1'b0;
 	end
 	else begin
 	
-    if(flag == 1'b1) begin 
-	    out_gpp_phv_wr <= pktin_data_valid;
-	 end
-	 else begin
-	    out_gpp_phv_wr <= 1'b0;
-	 end 
+        if(flag == 1'b1) begin 
+            //out_gpp_phv_wr <= pktin_data_valid;
+            if(pktin_axis_tuser == 2'b10) begin
+               out_gpp_phv_wr <= 1'b1; 
+            end 
+            else begin
+                out_gpp_phv_wr <= 1'b0;
+            end
+        end
+        else begin
+            out_gpp_phv_wr <= 1'b0;
+        end 
        	 	 
 		if(pktin_data_wr == 1'b1)begin
-		   case(pkt_step_count_inc)
-			8'd2:begin
-				 PHV[1023:896]<=pktin_data[127:0]; 
-				 out_gpp_phv <= {pktin_data[127:0],896'b0};
-			end
-			8'd3:begin
-			    PHV[895:768]<=pktin_data[127:0];
-				 out_gpp_phv <= {PHV[1023:896],pktin_data[127:0],768'b0};
-			end
-			8'd4:begin
-			    PHV[767:640]<= pktin_data[127:0];
-				 out_gpp_phv <= {PHV[1023:768],pktin_data[127:0],640'b0};
-			end
-			8'd5:begin
-			    PHV[639:512] <= pktin_data[127:0];
-				out_gpp_phv <= {PHV[1023:640],pktin_data[127:0],512'b0};
-			end
-			8'd6:begin
-			    PHV[511:384] <= pktin_data[127:0];
-				out_gpp_phv <= {PHV[1023:512],pktin_data[127:0],384'b0};
-			end
-			8'd7:begin
-			    PHV[383:256] <= pktin_data[127:0];	
-                out_gpp_phv <= {PHV[1023:384],pktin_data[127:0],256'b0};				
-			end
-            8'd8:begin
-			    PHV[255:128] <= pktin_data[127:0];	
-                out_gpp_phv <= {PHV[1023:256],pktin_data[127:0],128'b0};				 
-			end
-			8'd9:begin
-			    PHV[127:0] <= pktin_data[127:0];	
-                out_gpp_phv <= {PHV[1023:128],pktin_data[127:0]};				 
-			end
-			default:begin 
-				 PHV <= PHV;
-				 out_gpp_phv <= out_gpp_phv;
-			end
+		    case(pkt_step_count_inc)
+                8'd0:begin
+                    PHV[1023:768] <= pktin_data[255:0];
+                    out_gpp_phv <= {pktin_data[255:0], 768'b0};
+                end
+                8'd1:begin
+                    PHV[767:512] <= pktin_data[255:0];
+                    out_gpp_phv <= {PHV[1023:768], pktin_data[255:0], 521'b0};
+                end
+                8'd2:begin
+                    PHV[511:256] <= pktin_data[255:0];
+                    out_gpp_phv <= {PHV[1023:512], pktin_data[255:0], 256'b0};
+                end
+                8'd3:begin
+                    PHV[255:0] <= pktin_data[255:0];
+                    out_gpp_phv <= {PHV[1023:256], pktin_data[255:0]};
+                end
+                default:begin 
+                    PHV <= PHV;
+                    out_gpp_phv <= out_gpp_phv;
+                end
 			endcase		
 		end		
 		else begin
@@ -318,6 +302,9 @@ assign is_ipv4 = (PHV[927:912] == 16'h0800)?1'b1:1'b0;
 assign is_arp = (PHV[927:912] == 16'h0806)?1'b1:1'b0;
 assign is_ipv4_tcp = ((PHV[927:912] == 16'h0800)&&(PHV[839:832] == 8'h6))? 1'b1:1'b0;
 assign is_ipv4_udp = ((PHV[927:912] == 16'h0800)&&(PHV[839:832] == 8'h11))? 1'b1:1'b0;
+//TODO here we use procl num 443 to identify QUIC packets.
+assign is_quic = ((PHV[927:912] == 16'h0800)&&(PHV[839:832] == 8'h11)&&((PHV[751:736] == 16'd443)
+    ||PHV[735:720] == 16'd443))? 1'b1:1'b0;
 assign is_ipv6 = (PHV[927:912] == 16'h86dd)?1'b1:1'b0;
 assign is_ipv6_udp = ((PHV[927:912] == 16'h86dd)&&(PHV[863:856] == 8'h11))?1'b1:1'b0;
 assign is_ipv6_tcp = ((PHV[927:912] == 16'h86dd)&&(PHV[863:856] == 8'h6))? 1'b1:1'b0;
@@ -325,33 +312,37 @@ assign is_ipv6_tcp = ((PHV[927:912] == 16'h86dd)&&(PHV[863:856] == 8'h6))? 1'b1:
 always @(posedge clk) begin 
     if(rst_n == 1'b0) begin
 	     PST <= 8'b0;
-	 end
-	 else begin
-	 if(is_ipv6_tcp == 1'b1) begin//PST = 8'b1000 0001           
-        PST[7:0] <= 8'b10000001;
-    end
-    else if(is_ipv6_udp == 1'b1) begin//PST = 8'b1000 0011           
-        PST[7:0] <= 8'b10000011;
-    end 
-    else if(is_ipv6 == 1'b1) begin //PST = 1000 0010
-        PST[7:0] <= 8'b10000010;
-    end
-    else if(is_ipv4_tcp == 1'b1) begin//PST =8'b0000 0001
-        PST[7:0] <= 8'b00000001;
-    end
-    else if(is_ipv4_udp == 1'b1) begin//PST =8'b0000 0111
-        PST[7:0] <= 8'b00000111;
-    end  
-    else if(is_ipv4 == 1'b1)begin //PST = 0000 0010
-        PST[7:0] <= 8'b00000010;
-    end
-    else if (is_arp == 1'b1) begin //PST = 8'b0000 0011
-        PST[7:0] <= 8'b00000011;
-    end
-    else begin
-        PST <= PST;
-    end        	 
-	 end  
+	end
+	else begin
+	    if(is_ipv6_tcp == 1'b1) begin//PST = 8'b1000 0001           
+            PST[7:0] <= 8'b10000001;
+        end
+        else if(is_ipv6_udp == 1'b1) begin//PST = 8'b1000 0011           
+            PST[7:0] <= 8'b10000011;
+        end 
+        else if(is_ipv6 == 1'b1) begin //PST = 1000 0010
+            PST[7:0] <= 8'b10000010;
+        end
+        else if(is_ipv4_tcp == 1'b1) begin//PST =8'b0000 0001
+            PST[7:0] <= 8'b00000001;
+        end
+        else if(is_ipv4_udp == 1'b1) begin//PST =8'b0000 0111
+            PST[7:0] <= 8'b00000111;
+        end  
+        else if(is_ipv4 == 1'b1)begin //PST = 0000 0010
+            PST[7:0] <= 8'b00000010;
+        end
+        else if (is_arp == 1'b1) begin //PST = 8'b0000 0011
+            PST[7:0] <= 8'b00000011;
+        end
+        //TODO here the QUIC PST is 8'b1100 0001
+        else if (is_quic == 1'b1) begin
+            PST[7:0] <= 8'b11000001;
+        end
+        else begin
+            PST <= PST;
+        end        	 
+	end  
 end  
 
 
@@ -364,8 +355,15 @@ always @(posedge clk or negedge rst_n) begin
 		out_gpp_md_wr <= 1'b0;
     end
     else begin 	 
+        //the out_md will only be changed at the tail.
 	    if(flag == 1'b1) begin 
-	       out_gpp_md_wr <= pktin_data_valid;
+	        //out_gpp_md_wr <= pktin_data_valid;
+            if(pktin_axis_tuser == 2'b10) begin
+               out_gpp_md_wr <= 1'b1; 
+            end 
+            else begin
+                out_gpp_md_wr <= 1'b0;
+            end
 	    end
 	    else begin
 	       out_gpp_md_wr <= 1'b0;

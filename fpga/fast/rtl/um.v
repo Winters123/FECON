@@ -22,6 +22,7 @@
 //      date:  2020/06/22
 //      modifier: Yang Xiangrui
 //      description: adapt to corundum
+//      1) added axis_tkeep and axis_tuser 
 ///////////////////////////////////////////////////////////////// 
 
 module um #(
@@ -33,34 +34,32 @@ module um #(
     
 //cpu or port
     input  pktin_data_wr,
-    input  [133:0] pktin_data,
+    input  [255:0] pktin_data,
     input  pktin_data_valid,
     input  pktin_data_valid_wr,
+    input  [1:0]  tx_axis_tuser_in,
+    input  [31:0] tx_axis_tkeep_in,
     output pktin_ready,//pktin_ready = um2port_alf
     
     output pktout_data_wr,
-    output [133:0] pktout_data,
+    output [255:0] pktout_data,
     output pktout_data_valid,
     output pktout_data_valid_wr,
+    output [1:0]  tx_axis_tuser_out,
+    output [31:0] tx_axis_tkeep_out,
     input pktout_ready,//pktout_ready = port2um_alf    
-    
-    input [133:0] dma2um_data,
-    input dma2um_data_wr,
-    output um2dma_ready,
-    
-    output [133:0] um2dma_data,
-    output um2dma_data_wr,
-    input dma2um_ready,
     
 //to match
     output um2me_key_wr,
     output um2me_key_valid,
     output [511:0] um2match_key,
     input um2me_ready,//um2me_ready = ~match2um_key_alful
+
 //from match
     input me2um_id_wr,
     input [15:0] match2um_id,
     output um2match_gme_alful,
+
 //localbus
     input ctrl_valid,  
     input ctrl2um_cs_n,
@@ -85,13 +84,17 @@ wire [1023:0] gpp2gke_phv;
 wire gpp2gke_phv_wr;
 wire gke2gpp_md_alf;
 wire gke2gpp_phv_alf;
+wire [1:0]   gpp2gke_tuser;
+wire [31:0]  gpp2gke_tkeep;
 
 //GPP to Data_cache
 wire gpp2data_cache_data_wr;
-wire [133:0]gpp2data_cache_data;
+wire [255:0]gpp2data_cache_data;
 wire gpp2data_cache_valid_wr;
 wire gpp2data_cache_valid;
 wire data_cache2gpp_alf;
+wire [1:0]  gpp2data_cache_tuser;
+wire [31:0] gpp2data_cache_tkeep;
 
 //GKE to Gme
 wire [255:0] gke2gme_md;
@@ -106,13 +109,15 @@ wire gme2gke_phv_alf;
 
 //Data_cache to GAC
 wire data_cache2gac_data_wr;
-wire [133:0] data_cache2gac_data;
+wire [255:0] data_cache2gac_data;
 wire data_cache2gac_valid_wr;
 wire data_cache2gac_valid;
 wire gac2data_cache_alf;
+wire [1:0]  data_cache2gac_tuser;
+wire [31:0] data_cache2gac_tkeep;
 
 //GAC to GOE 
-wire [133:0] gac2goe_data;
+wire [255:0] gac2goe_data;
 wire gac2goe_data_wr;
 wire [1023:0] gac2goe_phv;
 wire gac2goe_phv_wr;
@@ -120,6 +125,8 @@ wire gac2goe_valid;
 wire gac2goe_valid_wr;
 wire goe2gac_alf;
 wire goe2gac_phv_alf;
+wire [1:0]  gac2goe_tuser;
+wire [31:0] gac2goe_tkeep;
 
 //GME to GAC
 wire [255:0] gme2gac_md;
@@ -131,6 +138,7 @@ wire gac2gme_phv_alf;
 
 
 //cmd
+//TODO: going to be changed to AXIL, come back later.
 wire [133:0] cout_gpp_data;
 wire cout_gpp_data_wr;
 wire cin_gpp_ready;
