@@ -38,8 +38,9 @@
 	 
 //waiting for pkt
     input in_gac_data_wr,
-    input [133:0] in_gac_data,
-    input in_gac_valid_wr,
+    //input [133:0] in_gac_data,
+    input [255:0] in_gac_data,
+	input in_gac_valid_wr,
     input in_gac_valid,
     output out_gac_data_alf,		
 //receive form gme 
@@ -52,7 +53,8 @@
 	output wire out_gac_phv_alf,
 	  	
 //transmit to next module(goeatch)
-    output reg [133:0] out_gac_data,
+    //output reg [133:0] out_gac_data,
+	output reg [255:0] out_gac_data,
 	output reg out_gac_data_wr,
 	output reg out_gac_valid_wr,
     output reg out_gac_valid,
@@ -171,23 +173,23 @@ always @(posedge clk or negedge rst_n) begin
 		            gac2cfg_ack <= 1'b0;
 					cfg_address <= 8'b0;
 					cfg_wdata <= 32'b0;					 
-					 if((sync_cfg2gac_cs == 1'b1) && (cfg2gac_rw == 1'b0)) begin  //write  
-						    cfg_ram_wr <= 1'b1;
-							gac2cfg_ack <= 1'b1;
-							cfg_wdata   <= cfg2gac_wdata;
-							cfg_address <= cfg2gac_addr[9:2];   
-						    cfg_state <= R_WRITE_S;
+					if((sync_cfg2gac_cs == 1'b1) && (cfg2gac_rw == 1'b0)) begin  //write  
+						cfg_ram_wr <= 1'b1;
+						gac2cfg_ack <= 1'b1;
+						cfg_wdata   <= cfg2gac_wdata;
+						cfg_address <= cfg2gac_addr[9:2];   
+						cfg_state <= R_WRITE_S;
                      end
 					 else if((sync_cfg2gac_cs == 1'b1) && (cfg2gac_rw == 1'b1)) begin  //read                      
-						    //cfg_ram_rd <= 1'b1;
-							if(cfg2gac_addr[10] == 1'b0) begin  //read flow table
-							   cfg_address <= cfg2gac_addr[9:2];
-							   flag <= 1'b1;
-							end
-							else begin                          //read count and status
-							   flag <= 1'b0;
-							end   
-						    cfg_state <= R_READ_S;
+						//cfg_ram_rd <= 1'b1;
+						if(cfg2gac_addr[10] == 1'b0) begin  //read flow table
+						   cfg_address <= cfg2gac_addr[9:2];
+						   flag <= 1'b1;
+						end
+						else begin                          //read count and status
+						   flag <= 1'b0;
+						end   
+						cfg_state <= R_READ_S;
 					 end				      
 					 else begin
 					    cfg_state <= R_IDLE_S;
@@ -309,7 +311,7 @@ always @(posedge clk or negedge rst_n) begin
     end
 	 else begin
 	    case(gac_state)
-		     IDLE_S: begin
+		    IDLE_S: begin
 			    gac_vfifo_rd <= 1'b0;
                 gac_dfifo_rd <= 1'b0;
 		        PHV_fifo_rd  <= 1'b0;
@@ -319,62 +321,62 @@ always @(posedge clk or negedge rst_n) begin
                 out_gac_valid_wr <= 1'b0;
 				out_gac_valid<=1'b0;
 				out_gac_data_wr <= 1'b0;				 
-				  if((gac_vfifo_empty == 1'b0) && (MD_fifo_empty == 1'b0) && (in_gac_alf == 1'b0)&& (in_gac_phv_alf==1'b0)) begin //wait pkt and md(index)
-				     if(MD_fifo_rdata[87:80] == LMID) begin //DMID = 4
-					  MD_fifo_rd <= 1'b0;					 
-                   //   gac_ram_rd <= 1'b1;  
-                      gac_address <= MD_fifo_rdata[57:50];  //index
-                      gac_state <= LOOKUP_S;
-					  end
-					  else begin //DMID != 4
-                          gac_vfifo_rd <= 1'b1;
-				          gac_dfifo_rd <= 1'b1;
-						  PHV_fifo_rd <= 1'b1;
-						  MD_fifo_rd <= 1'b1;						 								
-						  out_gac_phv_wr <= 1'b1;
-						  out_gac_phv <= PHV_fifo_rdata;
-
-					      gac_state <= TRANS_S;
-					  end
-			     end       
-				  else begin
-			           gac_vfifo_rd <= 1'b0;
-                       gac_dfifo_rd <= 1'b0;
-					   PHV_fifo_rd <= 1'b0;								  
-					   out_gac_data <= 134'b0;
-                       out_gac_data_wr <= 1'b0;			  
-					   out_gac_phv <= 1024'b0;
-					   out_gac_phv_wr <= 1'b0;							  
-                    gac_state <= IDLE_S;			  
-				  end		  
-			  end
+				    if((gac_vfifo_empty == 1'b0) && (MD_fifo_empty == 1'b0) && (in_gac_alf == 1'b0)&& (in_gac_phv_alf==1'b0)) begin //wait pkt and md(index)
+				  		if(MD_fifo_rdata[87:80] == LMID) begin //DMID = 4
+					  		MD_fifo_rd <= 1'b0;					 
+                      		//gac_ram_rd <= 1'b1;  not because we don't read it, just not necessary.
+                      		gac_address <= MD_fifo_rdata[57:50];  //index
+                      		gac_state <= LOOKUP_S;
+					  	end
+					    else begin //DMID != 4
+                        	gac_vfifo_rd <= 1'b1;
+				        	gac_dfifo_rd <= 1'b1;
+							PHV_fifo_rd <= 1'b1;
+							MD_fifo_rd <= 1'b1;						 								
+							out_gac_phv_wr <= 1'b1;
+							out_gac_phv <= PHV_fifo_rdata;
+					    	gac_state <= TRANS_S;
+					    end
+			        end       
+				    else begin
+			        	gac_vfifo_rd <= 1'b0;
+                    	gac_dfifo_rd <= 1'b0;
+						PHV_fifo_rd <= 1'b0;								  
+						out_gac_data <= 134'b0;
+                    	out_gac_data_wr <= 1'b0;			  
+						out_gac_phv <= 1024'b0;
+						out_gac_phv_wr <= 1'b0;							  
+                    	gac_state <= IDLE_S;			  
+				    end		  
+			end
 			  
-			  LOOKUP_S: begin
-			     MD_fifo_rd <= 1'b0;
-			//	 gac_ram_rd <= 1'b0;
-			//	 gac_address <= 8'b0;			  
-				 gac_state <= WAIT_S;			  
-			  end
+			LOOKUP_S: begin
+			    MD_fifo_rd <= 1'b0;
+			//	gac_ram_rd <= 1'b0;
+			//	gac_address <= 8'b0;			  
+				gac_state <= WAIT_S;			  
+			end
 			  
-			  WAIT_S: begin    //ram read have 2 cycle delay
-				  gac_vfifo_rd <= 1'b1;
-                  gac_dfifo_rd <= 1'b1;
-				  PHV_fifo_rd <= 1'b1;
-				  MD_fifo_rd <= 1'b1;								               
-				  out_gac_phv_wr <= 1'b0;										
-                  gac_state <= METADATA_S;		  
-			  end
+			WAIT_S: begin    //ram read have 2 cycle delay
+				gac_vfifo_rd <= 1'b1;
+                gac_dfifo_rd <= 1'b1;
+				PHV_fifo_rd <= 1'b1;
+				MD_fifo_rd <= 1'b1;								               
+				out_gac_phv_wr <= 1'b0;										
+                gac_state <= METADATA_S;		  
+			end
 			  
-			  METADATA_S: begin
-		         gac_vfifo_rd <= 1'b0;
-				 PHV_fifo_rd  <= 1'b0;
-				 MD_fifo_rd <= 1'b0;	
-                 out_gac_phv <= PHV_fifo_rdata;	
-                 out_gac_phv_wr <= 1'b1;				 
-                 case(gac_rdata[31:28])
-                   4'd1: begin//1 trans to CPU with thread id assignd by user
-                        out_gac_data_wr <= 1'b1;							
-						out_gac_data[133:128] <= gac_dfifo_rdata[133:128];
+			METADATA_S: begin
+		        gac_vfifo_rd <= 1'b0;
+				PHV_fifo_rd  <= 1'b0;
+				MD_fifo_rd <= 1'b0;	
+                out_gac_phv <= PHV_fifo_rdata;	
+                out_gac_phv_wr <= 1'b1;				 
+                case(gac_rdata[31:28])
+                    4'd1: begin//1 trans to CPU with thread id assignd by user
+                        out_gac_data_wr <= 1'b1;
+						//to be compatible with the 							
+						out_gac_data[255:128] <= gac_dfifo_rdata[255:128];
 						out_gac_data[127]     <= MD_fifo_rdata[127];      //pktsrc
 						out_gac_data[126]     <= 1'b1;                    //pkedes
 						out_gac_data[125:120] <= MD_fifo_rdata[125:120];  //inport
@@ -388,7 +390,7 @@ always @(posedge clk or negedge rst_n) begin
                         gac_state <= TRANS_S;
                     end
                     
-                   4'd2: begin//2 trans to CPU with polling thread id
+                    4'd2: begin//2 trans to CPU with polling thread id
                         out_gac_data_wr <= 1'b1;
 						out_gac_data[133:128] <= gac_dfifo_rdata[133:128];
 						out_gac_data[127]     <= MD_fifo_rdata[127];      //pktsrc
@@ -411,7 +413,7 @@ always @(posedge clk or negedge rst_n) begin
                         gac_state <= TRANS_S;
                     end
                     
-                   4'd3: begin//3 trans to port 
+                    4'd3: begin//3 trans to port 
                         out_gac_data_wr <= 1'b1;								
                         out_gac_data[133:128] <= gac_dfifo_rdata[133:128];
 						out_gac_data[127]     <= MD_fifo_rdata[127];      //pktsrc
@@ -427,7 +429,7 @@ always @(posedge clk or negedge rst_n) begin
                         gac_state <= TRANS_S;
                     end
                     
-                   4'd4: begin//4 assign Mid
+                    4'd4: begin//4 assign Mid
                         out_gac_data_wr <= 1'b1;
 					  	out_gac_data[133:128] <= gac_dfifo_rdata[133:128];
 						out_gac_data[127]     <= MD_fifo_rdata[127];      //pktsrc
@@ -443,42 +445,44 @@ always @(posedge clk or negedge rst_n) begin
                         gac_state <= TRANS_S;
                     end									
                     
-                   default: begin //discard
+                    default: begin //discard
                         gac_state <= DISCARD_S;
 						out_gac_phv_wr <= 1'b0;	
 						out_gac_phv <=1024'b0;
-                   end
-               endcase		  
-			  end
+                    end
+                endcase		  
+			end
 			  
-			  TRANS_S: begin
-			      gac_vfifo_rd <= 1'b0;
-				  PHV_fifo_rd  <= 1'b0; 	
-			      MD_fifo_rd <= 1'b0;				
-			      out_gac_data <= gac_dfifo_rdata;
-				  out_gac_data_wr <= 1'b1;	
-				  out_gac_phv_wr <= 1'b0;				
-               if(gac_dfifo_rdata[133:132] == 2'b10) begin//end of pkt					  
-                   gac_dfifo_rd <= 1'b0;
-                   out_gac_valid_wr <= 1'b1;
-				   out_gac_valid<=1'b1;
-                   gac_state <= IDLE_S;
-               end
-               else begin				  
-                   gac_dfifo_rd <= 1'b1;
-                   out_gac_valid_wr <= 1'b0;
-				   out_gac_valid<=1'b0;
-                   gac_state <= TRANS_S;
-               end		  
-			  end
+			TRANS_S: begin
+			    gac_vfifo_rd <= 1'b0;
+				PHV_fifo_rd  <= 1'b0; 	
+			    MD_fifo_rd <= 1'b0;				
+			    out_gac_data <= gac_dfifo_rdata;
+				out_gac_data_wr <= 1'b1;	
+				out_gac_phv_wr <= 1'b0;				
+                
+				if(gac_dfifo_rdata[133:132] == 2'b10) begin//end of pkt					  
+                   	gac_dfifo_rd <= 1'b0;
+                   	out_gac_valid_wr <= 1'b1;
+				   	out_gac_valid<=1'b1;
+                   	gac_state <= IDLE_S;
+                end
+                else begin				  
+                	gac_dfifo_rd <= 1'b1;
+                	out_gac_valid_wr <= 1'b0;
+					out_gac_valid<=1'b0;
+                	gac_state <= TRANS_S;
+                end		  
+			end
 			  
-			  DISCARD_S: begin
-				 gac_vfifo_rd <= 1'b0;
-				 PHV_fifo_rd  <= 1'b0;
-				 MD_fifo_rd <= 1'b0;				 
-				 out_gac_phv <= 1024'b0;
-				 out_gac_phv_wr <= 1'b0;					 
-                if(gac_dfifo_rdata[133:132] == 2'b10) begin//end of pkt
+			DISCARD_S: begin
+				gac_vfifo_rd <= 1'b0;
+				PHV_fifo_rd  <= 1'b0;
+				MD_fifo_rd <= 1'b0;				 
+				out_gac_phv <= 1024'b0;
+				out_gac_phv_wr <= 1'b0;					 
+                
+				if(gac_dfifo_rdata[133:132] == 2'b10) begin//end of pkt
 					gac_dfifo_rd <= 1'b0;
                     gac_state <= IDLE_S;
                 end
@@ -486,25 +490,25 @@ always @(posedge clk or negedge rst_n) begin
                     gac_dfifo_rd <= 1'b1;
                     gac_state <= DISCARD_S;
                 end		  
-			  end
+			end
 			  
-			  default: begin
-			     gac_vfifo_rd <= 1'b0;
-                 gac_dfifo_rd <= 1'b0;
-		         PHV_fifo_rd  <= 1'b0;
-		         MD_fifo_rd   <= 1'b0;  
-		   //      gac_ram_rd <= 1'b0;	  
-		         out_gac_data <= 134'b0;
-                 out_gac_data_wr <= 1'b0;		    	  
-                 out_gac_phv <= 1024'b0;
-		         out_gac_phv_wr <= 1'b0;	
-                 out_gac_valid <= 1'b0;
-                 out_gac_valid_wr <= 1'b0;		  
-                 polling_cpuid <= 6'b0;
-		         gac_address <= 8'b0;
-                 gac_state <= IDLE_S;		  
-			  end		 
-		 endcase	 
+			default: begin
+			    gac_vfifo_rd <= 1'b0;
+                gac_dfifo_rd <= 1'b0;
+		        PHV_fifo_rd  <= 1'b0;
+		        MD_fifo_rd   <= 1'b0;  
+		   //     gac_ram_rd <= 1'b0;	  
+		        out_gac_data <= 134'b0;
+                out_gac_data_wr <= 1'b0;		    	  
+                out_gac_phv <= 1024'b0;
+		        out_gac_phv_wr <= 1'b0;	
+                out_gac_valid <= 1'b0;
+                out_gac_valid_wr <= 1'b0;		  
+                polling_cpuid <= 6'b0;
+		        gac_address <= 8'b0;
+                gac_state <= IDLE_S;		  
+			end		 
+		endcase	 
 	 end
 end
 
@@ -527,7 +531,7 @@ ram_32_256 gac_ram
     .doutb(gac_rdata)//.q_b(gac_rdata)    
 );
 
-
+//TODO change this fifo to 256bit width
 fifo_134_1024  gac_dfifo(
 	.srst(!rst_n),
 	.clk(clk),
@@ -539,19 +543,20 @@ fifo_134_1024  gac_dfifo(
 	.empty(gac_dfifo_empty),
 	.full()
 
-	);
+);
  fifo_1_256  gac_vfifo(
-       .srst(!rst_n),
-       .clk(clk),
-       .din(in_gac_valid),
-       .rd_en(gac_vfifo_rd),
-       .wr_en(in_gac_valid_wr),
-       .dout(gac_vfifo_rdata),
-       .data_count(),
-       .empty(gac_vfifo_empty),
-       .full()
-   
-       );
+    .srst(!rst_n),
+    .clk(clk),
+    .din(in_gac_valid),
+    .rd_en(gac_vfifo_rd),
+    .wr_en(in_gac_valid_wr),
+    .dout(gac_vfifo_rdata),
+    .data_count(),
+    .empty(gac_vfifo_empty),
+    .full()
+
+);
+
  fifo_256_256  MD_fifo(
        .srst(!rst_n),
        .clk(clk),

@@ -31,11 +31,8 @@ module gme #(
 )(   
     input clk,
     input rst_n,
-			 
-//lookup gme read index
-    input in_gme_index_wr,
-    input [15:0] in_gme_index,
-	output wire out_gme_index_alf,		 
+			 	
+
 //receive from Previous module
     input [511:0] in_gme_key,
 	input  in_gme_key_wr,
@@ -62,7 +59,12 @@ module gme #(
     output reg out_gme_key_wr,
     output reg [511:0] out_gme_key,
     input in_gme_key_alf,
-	
+
+//lookup gme read index
+    input in_gme_index_wr,
+    input [15:0] in_gme_index,
+	output wire out_gme_index_alf,	
+
 //localbus to gme
     input cfg2gme_cs_n, //low active
 	output reg gme2cfg_ack_n, //low active
@@ -185,21 +187,22 @@ always @(posedge clk or negedge rst_n) begin
     end 
     else begin 
 		case(md_phv_state)
-		    md_phv_idle:begin
-			 MD_fifo_rd<=1'b0;
-             out_gme_md <= 256'b0;
-             out_gme_md_wr <= 1'b0;
-			 md_flag<=1'b0;
-			 PHV_fifo_rd <= 1'b0;
-             out_gme_phv <= 1024'b0;	
-		     out_gme_phv_wr<=1'b0;
-			 out_gme_md_reg<=256'b0;
+
+		md_phv_idle:begin
+			MD_fifo_rd<=1'b0;
+            out_gme_md <= 256'b0;
+            out_gme_md_wr <= 1'b0;
+			md_flag<=1'b0;
+			PHV_fifo_rd <= 1'b0;
+            out_gme_phv <= 1024'b0;	
+		    out_gme_phv_wr<=1'b0;
+			out_gme_md_reg<=256'b0;
+			
+            address_a <= 8'b0;
+		    data_a <= 32'b0;
+		    index_rw <= 1'b0;
 			 
-             address_a <= 8'b0;
-		     data_a <= 32'b0;
-		     index_rw <= 1'b0;
-			 
-			 index_fifo_rd<=1'b0;
+			index_fifo_rd<=1'b0;
 			if((MD_fifo_empty == 1'b0)&&(PHV_fifo_empty == 1'b0))begin			   
                 if(MD_fifo_rdata[87:80] == LMID) begin 
 					if(index_fifo_empty==1'b0)begin
@@ -209,6 +212,7 @@ always @(posedge clk or negedge rst_n) begin
                         out_gme_md_reg <= {MD_fifo_rdata[255:88],8'd4,MD_fifo_rdata[79:0]};	
                         md_flag<=1'b1;	
 						
+						//TODO why there are address_a and index_addr which are the same
 						address_a <= index_fifo_rdata[7:0];
 						index_addr <= index_fifo_rdata[7:0];
 						md_phv_state<=wait0;
@@ -252,14 +256,15 @@ always @(posedge clk or negedge rst_n) begin
 				md_phv_state<=md_phv_idle;
 			end
 			else begin			  
-                    out_gme_md <= {out_gme_md_reg[255:64],index_fifo_rdata[12:0],1'b1,out_gme_md_reg[49:0]}; //use MD[63:50] to store index
-                    out_gme_md_wr <= 1'b1;
-					out_gme_phv <= PHV_fifo_rdata;
-		            out_gme_phv_wr<=1'b1; 
-					index_rw <= 1'b1;
-			        data_a <= q_a[31:0] + 1'b1;
-			        address_a <= index_addr;
-					md_phv_state<=md_phv_idle;			
+                out_gme_md <= {out_gme_md_reg[255:64],index_fifo_rdata[12:0],1'b1,out_gme_md_reg[49:0]}; 
+				//use MD[63:50] to store index
+                out_gme_md_wr <= 1'b1;
+				out_gme_phv <= PHV_fifo_rdata;
+		        out_gme_phv_wr<=1'b1; 
+				index_rw <= 1'b1;
+			    data_a <= q_a[31:0] + 1'b1;
+			    address_a <= index_addr;
+				md_phv_state<=md_phv_idle;			
 			end
 		end
 		default:md_phv_state<=md_phv_idle;
@@ -380,6 +385,7 @@ end
 //should be instantiated below here
 
 
+//TODO cannot quite understand what are you doing here
 ram_32_256 gme_ram_inst
 (      
     .clka(clk),
