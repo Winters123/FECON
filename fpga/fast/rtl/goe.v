@@ -31,7 +31,7 @@ module goe #(
 	
 //uda pkt waiting for transmit
     input in_goe_data_wr,
-    input [133:0] in_goe_data,
+    input [255:0] in_goe_data,
     input in_goe_valid_wr,
     input in_goe_valid,
 	(*MARK_DEBUG="TRUE"*)output out_goe_alf,
@@ -41,7 +41,7 @@ module goe #(
 	(*MARK_DEBUG="TRUE"*)output  out_goe_phv_alf,
 //pkt waiting for transmit
     output reg pktout_data_wr,
-    output reg [133:0] pktout_data,
+    output reg [255:0] pktout_data,
     output reg pktout_data_valid_wr,
     output reg pktout_data_valid,
     (*MARK_DEBUG="TRUE"*)input pktout_ready,
@@ -77,7 +77,7 @@ reg [31:0] out_goe_data_count;
 
 //stream fifo
 reg in_stream_data_wr;
-reg [133:0] in_stream_data;
+reg [255:0] in_stream_data;
 reg in_stream_valid_wr;
 reg in_stream_valid;
 
@@ -93,7 +93,7 @@ reg [11:0] pkt_length;
 
 reg  [7:0]stream_addr;
 reg stream_data_rd;
-wire [133:0]stream_data_q;
+wire [255:0]stream_data_q;
 wire [7:0]stream_data_usedw;
 reg stream_valid_rd;
 wire stream_valid_q;
@@ -119,51 +119,50 @@ always @(posedge clk or negedge rst_n) begin
     if(rst_n == 1'b0) begin 
         in_stream_data_wr <= 1'b0;
         in_stream_valid_wr <= 1'b0;
-        in_stream_data <= 134'b0;
+        in_stream_data <= 256'b0;
 		in_stream_valid<=1'b0;
 		write_en<=1'b0;
 		del_state<=del_idle;
     end
+	
     else begin
 		case(del_state)
-		del_idle:begin
-		    in_stream_data_wr <= 1'b0;
-            in_stream_valid_wr <= 1'b0;
-            in_stream_data <= 134'b0;
-		    in_stream_valid<=1'b0;
-		    write_en<=1'b0;
-		    if(in_goe_data_wr==1'b1 && in_goe_data[133:132]==2'b01)begin
-		        write_en<=in_goe_data[108];
-                in_stream_data_wr <= ~in_goe_data[108]; 
-                in_stream_data <= in_goe_data; 
-                del_state<=del_trans;			
-            end
-		    else begin
-		        del_state<=del_idle;		
-		    end
-        end
-	    del_trans:begin
-	        in_stream_data_wr <= 1'b0;
-            in_stream_valid_wr <= 1'b0;
-            in_stream_data <= 134'b0;
-	    	in_stream_valid<=1'b0;
-	        if(in_goe_data_wr==1'b1 && in_goe_data[133:132]==2'b10)begin
-	    	    in_stream_data_wr <= ~write_en; 
-                in_stream_data <= in_goe_data;
-	    		in_stream_valid <= ~write_en;
-                in_stream_valid_wr <= ~write_en;
-	    		del_state<=del_idle;
+			del_idle:begin
+			    in_stream_data_wr <= 1'b0;
+        	    in_stream_valid_wr <= 1'b0;
+        	    in_stream_data <= 256'b0;
+			    in_stream_valid<=1'b0;
+			    write_en<=1'b0;
+			    if(in_goe_data_wr==1'b1 && in_goe_data[133:132]==2'b01)begin
+			        write_en<=in_goe_data[108];
+        	        in_stream_data_wr <= ~in_goe_data[108]; 
+        	        in_stream_data <= in_goe_data; 
+        	        del_state<=del_trans;			
+        	    end
+			    else begin
+			        del_state<=del_idle;		
+			    end
+        	end
+
+	    	del_trans:begin
+				//the end of the pkt.
+	    	    if(in_goe_data_wr==1'b1 && in_goe_data[133:132]==2'b10)begin
+	    		    in_stream_data_wr <= ~write_en; 
+        	        in_stream_data <= in_goe_data;
+	    			in_stream_valid <= ~write_en;
+        	        in_stream_valid_wr <= ~write_en;
+	    			del_state<=del_idle;
+	    		end
+	    		else if(in_goe_data_wr)begin
+	    		    in_stream_data_wr <= ~write_en; 
+        	        in_stream_data <= in_goe_data;
+	    			del_state<=del_trans;	
+	    		end
+	    		else begin
+	    		    del_state<=del_trans;			
+	    		end
 	    	end
-	    	else if(in_goe_data_wr)begin
-	    	    in_stream_data_wr <= ~write_en; 
-                in_stream_data <= in_goe_data;
-	    		del_state<=del_trans;	
-	    	end
-	    	else begin
-	    	    del_state<=del_trans;			
-	    	end
-	    end
-	    default:begin del_state<=del_idle;end
+	    	default:begin del_state<=del_idle;end
 	    endcase
 	end
 end
@@ -187,7 +186,7 @@ always @(posedge clk or negedge rst_n)begin
         pktout_data_valid<=1'b0;
 		stream_valid_rd<=1'b0;
 		stream_data_rd<=1'b0;
-		pkt_length <= 12'b0;
+		pkt_length <= 12'b0;  //maximum is 4095.
 		stream_addr<=8'b0;
 		cnt_state<=cnt_idle;
 	end
@@ -204,15 +203,19 @@ always @(posedge clk or negedge rst_n)begin
 		stream_valid_rd<=1'b0;
 		stream_data_rd<=1'b0;
 		stream_addr<=8'b0;
-	    if(pktout_ready==1'b1 && stream_valid_emtpy==1'b0 )begin
+		//if FIFO is not empty, start sending.
+	    if(pktout_ready==1'b1 && stream_valid_emtpy==1'b0)begin
 			stream_valid_rd<=1'b1;
 		    stream_data_rd<=1'b1;
 			stream_rw<=1'b0;
+			//retrieve pkt length from md.
 			pkt_length <= stream_data_q[107:96];
+			//mismatch during the lookup.
 			if(stream_data_q[57:50] == 8'b0)begin
-			     address_b <= 8'h7f;
-                 stream_addr <= 8'h7f;
+			    address_b <= 8'h7f;
+                stream_addr <= 8'h7f;
 			end
+			//otherwise we use the action we retrived from the lookup.
 			else begin
 			    address_b <= stream_data_q[57:50];
 			    stream_addr <= stream_data_q[57:50];
@@ -238,6 +241,7 @@ always @(posedge clk or negedge rst_n)begin
         pktout_data<=stream_data_q;
 		cnt_state<=cnt_write;
 	end
+	//from this point on, pkts are read out.
 	cnt_write:begin
 	    stream_rw<=1'b1;
 		address_b<=stream_addr;
@@ -263,6 +267,7 @@ always @(posedge clk or negedge rst_n)begin
 			cnt_state<=cnt_trans;
 	    end
 	end
+
 	default:cnt_state<=cnt_idle;
 	endcase
 	end
@@ -295,164 +300,164 @@ localparam IDLE_C  = 3'd0,
 
 		  
 always@(posedge clk or negedge rst_n) begin
-   if(rst_n == 1'b0) begin
-      goe2cfg_ack_n <= 1'b1;
-	  goe2cfg_rdata <= 32'b0;
-	  address_a <= 8'b0;
-	  data_a <= 128'b0;
-	  cnt_rw <= 1'b0;
-	  addr_flag <= 1'b0;
-	  index_flag <= 1'b0;
-	  high_flag <= 1'b0;
-	  goe_cfg_state <= IDLE_C;
-   end
-   else begin
-      case(goe_cfg_state)
-	    IDLE_C:begin
-		   goe2cfg_ack_n <= 1'b1;
-		   goe2cfg_rdata <= 32'b0;
-		   address_a <= 8'b0;
-	       data_a <= 128'b0;
-	       cnt_rw <= 1'b0;
-		   addr_flag <= 1'b0;
-		   index_flag <= 1'b0;
-		   high_flag <= 1'b0;
-		   if((goe_cs_n == 1'b1) && (goe2cfg_ack_n == 1'b1)) begin
-		      if(cfg2goe_rw == 1'b0) begin    //write
-		         address_a <= {cfg2goe_addr[9:3],1'b1}; //read old data before write
-			     goe_cfg_state <= WAIT0_C;
-			  end
-			  else begin                      //read
-			     goe_cfg_state <= READ_C;
-				 if(cfg2goe_addr[12] == 1'b0) begin  //module count
-				    addr_flag <= 1'b0;
-				 end
-				 else begin                           //index table count
-				    address_a <= {cfg2goe_addr[9:3],1'b1};
-				    addr_flag <= 1'b1;
-				    if(cfg2goe_addr[2] == 1'b0) begin //low address
-                       high_flag <= 1'b1;
-                    end
-                    else begin                         //high address          
-                       high_flag <= 1'b0;
-                    end
-				    if(cfg2goe_addr[11] == 1'b0) begin  //read count
-				       index_flag <= 1'b1;
+    if(rst_n == 1'b0) begin
+    	goe2cfg_ack_n <= 1'b1;
+		goe2cfg_rdata <= 32'b0;
+		address_a <= 8'b0;
+		data_a <= 128'b0;
+		cnt_rw <= 1'b0;
+		addr_flag <= 1'b0;
+		index_flag <= 1'b0;
+		high_flag <= 1'b0;
+		goe_cfg_state <= IDLE_C;
+    end
+    else begin
+        case(goe_cfg_state)
+	    	IDLE_C:begin
+			    goe2cfg_ack_n <= 1'b1;
+			    goe2cfg_rdata <= 32'b0;
+			    address_a <= 8'b0;
+	    	    data_a <= 128'b0;
+	    	    cnt_rw <= 1'b0;
+			    addr_flag <= 1'b0;
+			    index_flag <= 1'b0;
+			    high_flag <= 1'b0;
+			    if((goe_cs_n == 1'b1) && (goe2cfg_ack_n == 1'b1)) begin
+			        if(cfg2goe_rw == 1'b0) begin    //write
+			           address_a <= {cfg2goe_addr[9:3],1'b1}; //read old data before write
+				       goe_cfg_state <= WAIT0_C;
 				    end
-				    else begin                         //read length
-				       index_flag <= 1'b0;
+				    else begin                      //read
+				      	goe_cfg_state <= READ_C;
+				 	  	if(cfg2goe_addr[12] == 1'b0) begin  //module count
+				 	  		addr_flag <= 1'b0;
+				 	  	end
+				 	  	else begin                           //index table count
+				 	  		address_a <= {cfg2goe_addr[9:3],1'b1};
+				 	  		addr_flag <= 1'b1;
+				 	  		if(cfg2goe_addr[2] == 1'b0) begin //low address
+        	          		    high_flag <= 1'b1;
+        	          		end
+        	          		else begin                         //high address          
+        	          		    high_flag <= 1'b0;
+        	          		end
+				 	  		if(cfg2goe_addr[11] == 1'b0) begin  //read count
+				 	  		   index_flag <= 1'b1;
+				 	  		end
+				 	  		else begin                         //read length
+				 	  		   index_flag <= 1'b0;
+				 	  		end
+				 	  	end
 				    end
-				 end
-			  end
-		   end
-		   else begin
-		      goe_cfg_state <= IDLE_C;
-		   end
-		
-		end
-		WAIT0_C :begin
-		   goe_cfg_state <= WAIT1_C;
-		end
-	    WAIT1_C :begin
-           goe_cfg_state <= WRITE_C;
-        end
-		WRITE_C:begin
-		   if(cfg2goe_addr[11] == 1'b0) begin  //write count
-		      data_a <= {q_a[127:96],cfg2goe_wdata,q_a[63:0]};	      
-		   end
-		   else begin                         //write length
-              data_a <= {q_a[127:32],cfg2goe_wdata};
-		   end
-		   address_a <= {cfg2goe_addr[9:3],1'b1};		   
-		   cnt_rw <= 1'b1;
-		   goe_cfg_state <= ACK_W;
-		end
-		READ_C:begin
-		   goe_cfg_state <= WAIT_C;
-		end
-		WAIT_C:begin
-		   goe_cfg_state <= ACK_R;
-		end
-		ACK_R:begin		   
-		   if(addr_flag) begin  //read index count
-		      if(index_flag) begin	
-		         if(high_flag) begin
-		            goe2cfg_rdata <= q_a[127:96];
-		         end
-		         else begin
-		            goe2cfg_rdata <= q_a[95:64];
-		         end	      		         
-		      end
-		      else begin
-		         if(high_flag) begin
-                    goe2cfg_rdata <= q_a[63:32];
-                 end
-                 else begin
-                    goe2cfg_rdata <= q_a[31:0];
-                 end
-		      end 
-		   end
-		   else begin   //read data count
-		      case(cfg2goe_addr[9:2])
-		       8'h0:begin
-			      goe2cfg_rdata <= 32'b0;
+			    end
+			    else begin
+			       goe_cfg_state <= IDLE_C;
+			    end
+			
+			end
+			WAIT0_C :begin
+			   goe_cfg_state <= WAIT1_C;
+			end
+	    	WAIT1_C :begin
+        	   goe_cfg_state <= WRITE_C;
+        	end
+			WRITE_C:begin
+			   if(cfg2goe_addr[11] == 1'b0) begin  //write count
+			      data_a <= {q_a[127:96],cfg2goe_wdata,q_a[63:0]};	      
 			   end
-			   8'h1:begin
-			      goe2cfg_rdata <= goe_status;
+			   else begin                         //write length
+        	      data_a <= {q_a[127:32],cfg2goe_wdata};
 			   end
-			   8'h2:begin
-			      goe2cfg_rdata <= 32'b0;
+			   address_a <= {cfg2goe_addr[9:3],1'b1};		   
+			   cnt_rw <= 1'b1;
+			   goe_cfg_state <= ACK_W;
+			end
+			READ_C:begin
+			   goe_cfg_state <= WAIT_C;
+			end
+			WAIT_C:begin
+			   goe_cfg_state <= ACK_R;
+			end
+			ACK_R:begin		   
+			   if(addr_flag) begin  //read index count
+			      if(index_flag) begin	
+			         if(high_flag) begin
+			            goe2cfg_rdata <= q_a[127:96];
+			         end
+			         else begin
+			            goe2cfg_rdata <= q_a[95:64];
+			         end	      		         
+			      end
+			      else begin
+			         if(high_flag) begin
+        	            goe2cfg_rdata <= q_a[63:32];
+        	         end
+        	         else begin
+        	            goe2cfg_rdata <= q_a[31:0];
+        	         end
+			      end 
 			   end
-			   8'h3:begin
-			      goe2cfg_rdata <= in_goe_data_count;
+			   else begin   //read data count
+			      case(cfg2goe_addr[9:2])
+			       8'h0:begin
+				      goe2cfg_rdata <= 32'b0;
+				   end
+				   8'h1:begin
+				      goe2cfg_rdata <= goe_status;
+				   end
+				   8'h2:begin
+				      goe2cfg_rdata <= 32'b0;
+				   end
+				   8'h3:begin
+				      goe2cfg_rdata <= in_goe_data_count;
+				   end
+				   8'h4:begin
+				      goe2cfg_rdata <= 32'b0;
+				   end
+				   8'h5:begin
+				      goe2cfg_rdata <= in_goe_phv_count;
+				   end
+				   8'h6:begin
+				      goe2cfg_rdata <= 32'b0;
+				   end
+				   8'h7:begin
+				      goe2cfg_rdata <= out_goe_data_count;
+				   end
+				   default:begin
+				      goe2cfg_rdata <= 32'b0;
+				   end
+			   endcase
 			   end
-			   8'h4:begin
-			      goe2cfg_rdata <= 32'b0;
+			   
+			   
+			   if(goe_cs_n == 1'b1) begin
+			      goe2cfg_ack_n <= 1'b0;
+				  goe_cfg_state <= ACK_R;
 			   end
-			   8'h5:begin
-			      goe2cfg_rdata <= in_goe_phv_count;
-			   end
-			   8'h6:begin
-			      goe2cfg_rdata <= 32'b0;
-			   end
-			   8'h7:begin
-			      goe2cfg_rdata <= out_goe_data_count;
-			   end
-			   default:begin
-			      goe2cfg_rdata <= 32'b0;
-			   end
-		   endcase
-		   end
-		   
-		   
-		   if(goe_cs_n == 1'b1) begin
-		      goe2cfg_ack_n <= 1'b0;
-			  goe_cfg_state <= ACK_R;
-		   end
-		   else begin
-		      goe2cfg_ack_n <= 1'b1;
-			  goe_cfg_state <= IDLE_C;
-		   end		   
-		
-		end
-		ACK_W:begin
-		   cnt_rw <= 1'b0;
-		   if(goe_cs_n == 1'b1) begin
-              goe2cfg_ack_n <= 1'b0;
-              goe_cfg_state <= ACK_W;
-           end
-           else begin
-              goe2cfg_ack_n <= 1'b1;
-              goe_cfg_state <= IDLE_C;
-           end    
-		end
-		default:begin
-		   goe2cfg_ack_n <= 1'b1;
-		   goe2cfg_rdata <= 32'b0;
-		   goe_cfg_state <= IDLE_C;
-		end
+			   else begin
+			      goe2cfg_ack_n <= 1'b1;
+				  goe_cfg_state <= IDLE_C;
+			   end		   
+			
+			end
+			ACK_W:begin
+			   cnt_rw <= 1'b0;
+			   if(goe_cs_n == 1'b1) begin
+        	      goe2cfg_ack_n <= 1'b0;
+        	      goe_cfg_state <= ACK_W;
+        	   end
+        	   else begin
+        	      goe2cfg_ack_n <= 1'b1;
+        	      goe_cfg_state <= IDLE_C;
+        	   end    
+			end
+			default:begin
+			   goe2cfg_ack_n <= 1'b1;
+			   goe2cfg_rdata <= 32'b0;
+			   goe_cfg_state <= IDLE_C;
+			end
 	  endcase
-   end
+    end
 
 end
    
@@ -537,6 +542,7 @@ ram_128_256 goe_ram_inst
     .doutb(q_b)   
 );
 
+//TODO data width changed from 134 to 256bit.
 fifo_134_256  stream_data(
 	.srst(!rst_n),
 	.clk(clk),
@@ -547,17 +553,18 @@ fifo_134_256  stream_data(
 	.data_count(stream_data_usedw),
 	.empty(),
 	.full()
-	);
+);
+
 fifo_1_128  stream_valid(
 	.srst(!rst_n),
 	.clk(clk),
 	.din(in_stream_valid),
-	.rd_en(stream_valid_rd),
 	.wr_en(in_stream_valid_wr),
+	.rd_en(stream_valid_rd),
 	.dout(stream_valid_q),
 	.empty(stream_valid_emtpy),
 	.full()
-	);	  	   
+);	  	   
 endmodule                
                    
 
