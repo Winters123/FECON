@@ -34,16 +34,18 @@ module goe #(
     input [255:0] in_goe_data,
     input in_goe_valid_wr,
     input in_goe_valid,
+	input [1:0] in_goe_axis_tuser,
+	input [31:0] in_goe_axis_tkeep,
 	(*MARK_DEBUG="TRUE"*)output out_goe_alf,
 	
-    input [1023:0] in_goe_phv,
-	input in_goe_phv_wr,
-	(*MARK_DEBUG="TRUE"*)output  out_goe_phv_alf,
+
 //pkt waiting for transmit
     output reg pktout_data_wr,
     output reg [255:0] pktout_data,
     output reg pktout_data_valid_wr,
     output reg pktout_data_valid,
+	output reg [1:0] pktout_axis_tuser,
+	output reg [31:0] pktout_axis_tkeep,
     (*MARK_DEBUG="TRUE"*)input pktout_ready,
 	
 //localbus to goe
@@ -81,6 +83,10 @@ reg [255:0] in_stream_data;
 reg in_stream_valid_wr;
 reg in_stream_valid;
 
+//stream related fifo
+reg [1:0] in_stream_axis_tuser;
+reg [31:0] in_stream_axis_tkeep;
+
 reg	[7:0]  address_a;
 reg	[7:0]  address_b;
 reg	[127:0] data_a;
@@ -94,10 +100,13 @@ reg [11:0] pkt_length;
 reg  [7:0]stream_addr;
 reg stream_data_rd;
 wire [255:0]stream_data_q;
+wire [1:0] stream_axis_tuser_q;
+wire [31:0] stream_axis_tkeep_q;
 wire [7:0]stream_data_usedw;
 reg stream_valid_rd;
 wire stream_valid_q;
 wire stream_valid_emtpy;
+
 //state
 reg [1:0]del_state;
 reg [2:0]cnt_state;
@@ -133,7 +142,7 @@ always @(posedge clk or negedge rst_n) begin
         	    in_stream_data <= 256'b0;
 			    in_stream_valid<=1'b0;
 			    write_en<=1'b0;
-			    if(in_goe_data_wr==1'b1 && in_goe_data[133:132]==2'b01)begin
+			    if(in_goe_data_wr==1'b1 && in_goe_axis_tuser[1:0]==2'b01)begin
 			        write_en<=in_goe_data[108];
         	        in_stream_data_wr <= ~in_goe_data[108]; 
         	        in_stream_data <= in_goe_data; 
@@ -146,7 +155,7 @@ always @(posedge clk or negedge rst_n) begin
 
 	    	del_trans:begin
 				//the end of the pkt.
-	    	    if(in_goe_data_wr==1'b1 && in_goe_data[133:132]==2'b10)begin
+	    	    if(in_goe_data_wr==1'b1 && in_goe_axis_tuser[1:0]==2'b10)begin
 	    		    in_stream_data_wr <= ~write_en; 
         	        in_stream_data <= in_goe_data;
 	    			in_stream_valid <= ~write_en;
@@ -181,9 +190,11 @@ always @(posedge clk or negedge rst_n)begin
 		data_b<=128'b0;
 		stream_rw<=1'b0;
         pktout_data_wr<=1'b0;
-        pktout_data<=134'b0;
+        pktout_data<=256'b0;
         pktout_data_valid_wr<=1'b0;
         pktout_data_valid<=1'b0;
+		pktout_axis_tuser <= 2'b0;
+		pktout_axis_tkeep <= 32'b0;
 		stream_valid_rd<=1'b0;
 		stream_data_rd<=1'b0;
 		pkt_length <= 12'b0;  //maximum is 4095.
@@ -197,9 +208,11 @@ always @(posedge clk or negedge rst_n)begin
 		data_b<=128'b0;
 		stream_rw<=1'b0;
         pktout_data_wr<=1'b0;
-        pktout_data<=134'b0;
+        pktout_data<=256'b0;
         pktout_data_valid_wr<=1'b0;
         pktout_data_valid<=1'b0;
+		pktout_axis_tuser <= 2'b0;
+		pktout_axis_tkeep <= 32'b0;
 		stream_valid_rd<=1'b0;
 		stream_data_rd<=1'b0;
 		stream_addr<=8'b0;
@@ -232,6 +245,8 @@ always @(posedge clk or negedge rst_n)begin
 		stream_data_rd<=1'b1;
 	    pktout_data_wr<=1'b1;
         pktout_data<=stream_data_q;
+		pktout_axis_tkeep <= stream_axis_tkeep_q;
+		pktout_axis_tuser <= stream_axis_tuser_q;
 		cnt_state<=cnt_wait1;
 	end
 	cnt_wait1:begin
@@ -239,6 +254,8 @@ always @(posedge clk or negedge rst_n)begin
 		stream_data_rd<=1'b1;
 	    pktout_data_wr<=1'b1;
         pktout_data<=stream_data_q;
+		pktout_axis_tkeep <= stream_axis_tkeep_q;
+		pktout_axis_tuser <= stream_axis_tuser_q;
 		cnt_state<=cnt_write;
 	end
 	//from this point on, pkts are read out.
@@ -250,13 +267,17 @@ always @(posedge clk or negedge rst_n)begin
 		stream_data_rd<=1'b1;
 	    pktout_data_wr<=1'b1;
         pktout_data<=stream_data_q;
+		pktout_axis_tkeep <= stream_axis_tkeep_q;
+		pktout_axis_tuser <= stream_axis_tuser_q;
 	    cnt_state<=cnt_trans;
 	end
 	cnt_trans:begin
 	    stream_rw<=1'b0;
 	    pktout_data_wr<=1'b1;
         pktout_data<=stream_data_q;
-		if(stream_data_q[133:132]==2'b10)begin//tail
+		pktout_axis_tkeep <= stream_axis_tkeep_q;
+		pktout_axis_tuser <= stream_axis_tuser_q;
+		if(stream_axis_tuser_q[1:0]==2'b10)begin//tail
 		    stream_data_rd<=1'b0;
 			pktout_data_valid_wr<=1'b1;
             pktout_data_valid<=1'b1;
@@ -497,23 +518,7 @@ always @(posedge clk or negedge rst_n) begin
 	 end	 
 end
 
-//***************************************************
-//                 in_goe_pfv_count
-//***************************************************
-always @(posedge clk or negedge rst_n) begin
-    if(rst_n == 1'b0 ) begin
-	    in_goe_phv_count <= 32'b0;	 
-	 end
-	 else begin
-	    if(in_goe_phv_wr == 1'b1 ) begin
-		    in_goe_phv_count <= in_goe_phv_count + 32'b1 ; 
-		end
-		else begin
-		    in_goe_phv_count <= in_goe_phv_count ; 
-		end
-	     
-	 end	 
-end	   
+
 
 //***************************************************
 //                 status
@@ -543,7 +548,7 @@ ram_128_256 goe_ram_inst
 );
 
 //TODO data width changed from 134 to 256bit.
-fifo_134_256  stream_data(
+fifo_256_256  stream_data(
 	.srst(!rst_n),
 	.clk(clk),
 	.din(in_stream_data),
@@ -553,6 +558,19 @@ fifo_134_256  stream_data(
 	.data_count(stream_data_usedw),
 	.empty(),
 	.full()
+);
+
+fifo_34_256  gac_tfifo(
+	.srst(!rst_n),
+	.clk(clk),
+	.din({in_stream_axis_tuser, in_stream_axis_tkeep}),
+	.rd_en(stream_data_rd),
+	.wr_en(in_stream_data_wr),
+	.dout({stream_axis_tuser_q,stream_axis_tkeep_q}),
+	.data_count(),
+	.empty(),
+	.full()
+
 );
 
 fifo_1_128  stream_valid(

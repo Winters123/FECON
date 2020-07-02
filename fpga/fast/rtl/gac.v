@@ -42,6 +42,8 @@
     input [255:0] in_gac_data,
 	input in_gac_valid_wr,
     input in_gac_valid,
+	input [1:0] in_gac_axis_tuser,
+	input [31:0] in_gac_axis_tkeep,
     output out_gac_data_alf,		
 //receive form gme 
     input [255:0]  in_gac_md,
@@ -58,11 +60,13 @@
 	output reg out_gac_data_wr,
 	output reg out_gac_valid_wr,
     output reg out_gac_valid,
+	output reg [1:0] out_gac_axis_tuser,
+	output reg [31:0] out_gac_axis_tkeep,
 	input in_gac_alf,
 		
-    output reg [1023:0] out_gac_phv,
-	output reg out_gac_phv_wr,
-	input in_gac_phv_alf,
+    //output reg [1023:0] out_gac_phv,
+	//output reg out_gac_phv_wr,
+	//input in_gac_phv_alf,
 		
 //localbus to gac
     input cfg2gac_cs, 
@@ -81,8 +85,6 @@
     output [133:0] cout_gac_data,
 	output cout_gac_data_wr,
 	input cin_gac_ready
-	
-
 );    
 
 //***************************************************
@@ -95,10 +97,13 @@ reg [31:0] in_gac_data_count;
 reg [31:0] in_gac_md_count;
 reg [31:0] in_gac_phv_count;
 reg [31:0] out_gac_data_count;
-reg [31:0] out_gac_phv_count;
+// reg [31:0] out_gac_phv_count;
 
 reg gac_dfifo_rd;
-wire [133:0] gac_dfifo_rdata;
+// wire [133:0] gac_dfifo_rdata;
+wire [255:0] gac_dfifo_rdata;
+wire [1:0] gac_tfifo_axis_tuser;
+wire [31:0] gac_tfifo_axis_tkeep;
 wire [9:0] gac_dfifo_usedw;
 wire gac_dfifo_empty;
 
@@ -112,10 +117,10 @@ wire [255:0] MD_fifo_rdata;
 wire MD_fifo_empty;
 
 
-reg PHV_fifo_rd;
-wire [1023:0] PHV_fifo_rdata;  
+// reg PHV_fifo_rd;
+// wire [1023:0] PHV_fifo_rdata;  
 
-wire PHV_fifo_empty;
+// wire PHV_fifo_empty;
 
 
 reg [5:0] polling_cpuid;
@@ -250,9 +255,9 @@ always @(posedge clk or negedge rst_n) begin
 						  8'ha:begin
 						     gac2cfg_rdata <= 32'b0;
 						  end
-						  8'hb:begin
-						     gac2cfg_rdata <= out_gac_phv_count;
-						  end						 						  
+						//   8'hb:begin
+						//      gac2cfg_rdata <= out_gac_phv_count;
+						//   end						 						  
 						  default:begin
 						    gac2cfg_rdata <= 32'b0;
 						  end
@@ -314,14 +319,15 @@ always @(posedge clk or negedge rst_n) begin
 		    IDLE_S: begin
 			    gac_vfifo_rd <= 1'b0;
                 gac_dfifo_rd <= 1'b0;
-		        PHV_fifo_rd  <= 1'b0;
+		        // PHV_fifo_rd  <= 1'b0;
 		        MD_fifo_rd   <= 1'b0;  
 		     //   gac_ram_rd <= 1'b0;
 				gac_address <= 8'b0;			  
                 out_gac_valid_wr <= 1'b0;
 				out_gac_valid<=1'b0;
-				out_gac_data_wr <= 1'b0;				 
-				    if((gac_vfifo_empty == 1'b0) && (MD_fifo_empty == 1'b0) && (in_gac_alf == 1'b0)&& (in_gac_phv_alf==1'b0)) begin //wait pkt and md(index)
+				out_gac_data_wr <= 1'b0;
+				 //wait pkt and md(index)				 
+				    if((gac_vfifo_empty == 1'b0) && (MD_fifo_empty == 1'b0) && (in_gac_alf == 1'b0)) begin
 				  		if(MD_fifo_rdata[87:80] == LMID) begin //DMID = 4
 					  		MD_fifo_rd <= 1'b0;					 
                       		//gac_ram_rd <= 1'b1;  not because we don't read it, just not necessary.
@@ -331,21 +337,21 @@ always @(posedge clk or negedge rst_n) begin
 					    else begin //DMID != 4
                         	gac_vfifo_rd <= 1'b1;
 				        	gac_dfifo_rd <= 1'b1;
-							PHV_fifo_rd <= 1'b1;
+							// PHV_fifo_rd <= 1'b1;
 							MD_fifo_rd <= 1'b1;						 								
-							out_gac_phv_wr <= 1'b1;
-							out_gac_phv <= PHV_fifo_rdata;
+							// out_gac_phv_wr <= 1'b1;
+							// out_gac_phv <= PHV_fifo_rdata;
 					    	gac_state <= TRANS_S;
 					    end
 			        end       
 				    else begin
 			        	gac_vfifo_rd <= 1'b0;
                     	gac_dfifo_rd <= 1'b0;
-						PHV_fifo_rd <= 1'b0;								  
+						// PHV_fifo_rd <= 1'b0;								  
 						out_gac_data <= 134'b0;
                     	out_gac_data_wr <= 1'b0;			  
-						out_gac_phv <= 1024'b0;
-						out_gac_phv_wr <= 1'b0;							  
+						// out_gac_phv <= 1024'b0;
+						// out_gac_phv_wr <= 1'b0;							  
                     	gac_state <= IDLE_S;			  
 				    end		  
 			end
@@ -360,9 +366,9 @@ always @(posedge clk or negedge rst_n) begin
 			WAIT_S: begin    //ram read have 2 cycle delay
 				gac_vfifo_rd <= 1'b1;
                 gac_dfifo_rd <= 1'b1;
-				PHV_fifo_rd <= 1'b1;
+				// PHV_fifo_rd <= 1'b1;
 				MD_fifo_rd <= 1'b1;								               
-				out_gac_phv_wr <= 1'b0;										
+				// out_gac_phv_wr <= 1'b0;										
                 gac_state <= METADATA_S;		  
 			end
 			  
@@ -370,8 +376,8 @@ always @(posedge clk or negedge rst_n) begin
 		        gac_vfifo_rd <= 1'b0;
 				PHV_fifo_rd  <= 1'b0;
 				MD_fifo_rd <= 1'b0;	
-                out_gac_phv <= PHV_fifo_rdata;	
-                out_gac_phv_wr <= 1'b1;				 
+                // out_gac_phv <= PHV_fifo_rdata;	
+                // out_gac_phv_wr <= 1'b1;				 
                 case(gac_rdata[31:28])
                     4'd1: begin//1 trans to CPU with thread id assignd by user
                         out_gac_data_wr <= 1'b1;
@@ -392,7 +398,7 @@ always @(posedge clk or negedge rst_n) begin
                     
                     4'd2: begin//2 trans to CPU with polling thread id
                         out_gac_data_wr <= 1'b1;
-						out_gac_data[133:128] <= gac_dfifo_rdata[133:128];
+						out_gac_data[255:128] <= gac_dfifo_rdata[255:128];
 						out_gac_data[127]     <= MD_fifo_rdata[127];      //pktsrc
 						out_gac_data[126]     <= 1'b1;                    //pktdes
 						out_gac_data[125:120] <= MD_fifo_rdata[125:120];  //inport
@@ -415,7 +421,7 @@ always @(posedge clk or negedge rst_n) begin
                     
                     4'd3: begin//3 trans to port 
                         out_gac_data_wr <= 1'b1;								
-                        out_gac_data[133:128] <= gac_dfifo_rdata[133:128];
+                        out_gac_data[255:128] <= gac_dfifo_rdata[255:128];
 						out_gac_data[127]     <= MD_fifo_rdata[127];      //pktsrc
 						out_gac_data[126]     <= 1'b0;                    //pktdes
 						out_gac_data[125:120] <= MD_fifo_rdata[125:120];  //inport
@@ -431,7 +437,7 @@ always @(posedge clk or negedge rst_n) begin
                     
                     4'd4: begin//4 assign Mid
                         out_gac_data_wr <= 1'b1;
-					  	out_gac_data[133:128] <= gac_dfifo_rdata[133:128];
+					  	out_gac_data[255:128] <= gac_dfifo_rdata[255:128];
 						out_gac_data[127]     <= MD_fifo_rdata[127];      //pktsrc
 						out_gac_data[126]     <= 1'b1;                    //pktdes
 						out_gac_data[125:120] <= MD_fifo_rdata[125:120];  //inport
@@ -445,23 +451,25 @@ always @(posedge clk or negedge rst_n) begin
                         gac_state <= TRANS_S;
                     end									
                     
+					//TODO anything we don't know will be disgarded.
+					//TODO during the test, we need to let them pass.
                     default: begin //discard
                         gac_state <= DISCARD_S;
-						out_gac_phv_wr <= 1'b0;	
-						out_gac_phv <=1024'b0;
+						// out_gac_phv_wr <= 1'b0;	
+						// out_gac_phv <=1024'b0;
                     end
                 endcase		  
 			end
 			  
 			TRANS_S: begin
 			    gac_vfifo_rd <= 1'b0;
-				PHV_fifo_rd  <= 1'b0; 	
+				// PHV_fifo_rd  <= 1'b0; 	
 			    MD_fifo_rd <= 1'b0;				
 			    out_gac_data <= gac_dfifo_rdata;
 				out_gac_data_wr <= 1'b1;	
-				out_gac_phv_wr <= 1'b0;				
+				// out_gac_phv_wr <= 1'b0;				
                 
-				if(gac_dfifo_rdata[133:132] == 2'b10) begin//end of pkt					  
+				if(gac_tfifo_axis_tuser[1:0] == 2'b10) begin//end of pkt					  
                    	gac_dfifo_rd <= 1'b0;
                    	out_gac_valid_wr <= 1'b1;
 				   	out_gac_valid<=1'b1;
@@ -477,12 +485,12 @@ always @(posedge clk or negedge rst_n) begin
 			  
 			DISCARD_S: begin
 				gac_vfifo_rd <= 1'b0;
-				PHV_fifo_rd  <= 1'b0;
+				// PHV_fifo_rd  <= 1'b0;
 				MD_fifo_rd <= 1'b0;				 
-				out_gac_phv <= 1024'b0;
-				out_gac_phv_wr <= 1'b0;					 
+				// out_gac_phv <= 1024'b0;
+				// out_gac_phv_wr <= 1'b0;					 
                 
-				if(gac_dfifo_rdata[133:132] == 2'b10) begin//end of pkt
+				if(gac_tfifo_axis_tuser[1:0] == 2'b10) begin//end of pkt
 					gac_dfifo_rd <= 1'b0;
                     gac_state <= IDLE_S;
                 end
@@ -495,13 +503,13 @@ always @(posedge clk or negedge rst_n) begin
 			default: begin
 			    gac_vfifo_rd <= 1'b0;
                 gac_dfifo_rd <= 1'b0;
-		        PHV_fifo_rd  <= 1'b0;
+		        // PHV_fifo_rd  <= 1'b0;
 		        MD_fifo_rd   <= 1'b0;  
-		   //     gac_ram_rd <= 1'b0;	  
+		        // gac_ram_rd <= 1'b0;	  
 		        out_gac_data <= 134'b0;
                 out_gac_data_wr <= 1'b0;		    	  
-                out_gac_phv <= 1024'b0;
-		        out_gac_phv_wr <= 1'b0;	
+                // out_gac_phv <= 1024'b0;
+		        // out_gac_phv_wr <= 1'b0;	
                 out_gac_valid <= 1'b0;
                 out_gac_valid_wr <= 1'b0;		  
                 polling_cpuid <= 6'b0;
@@ -532,7 +540,20 @@ ram_32_256 gac_ram
 );
 
 //TODO change this fifo to 256bit width
-fifo_134_1024  gac_dfifo(
+//TODO also needs to shorten the FIFO length
+// fifo_134_1024  gac_dfifo(
+// 	.srst(!rst_n),
+// 	.clk(clk),
+// 	.din(in_gac_data),
+// 	.rd_en(gac_dfifo_rd),
+// 	.wr_en(in_gac_data_wr),
+// 	.dout(gac_dfifo_rdata),
+// 	.data_count(gac_dfifo_usedw),
+// 	.empty(gac_dfifo_empty),
+// 	.full()
+
+// );
+fifo_256_256  gac_dfifo(
 	.srst(!rst_n),
 	.clk(clk),
 	.din(in_gac_data),
@@ -544,7 +565,21 @@ fifo_134_1024  gac_dfifo(
 	.full()
 
 );
- fifo_1_256  gac_vfifo(
+//TODO this tfifo is used for axis signals
+fifo_34_256  gac_tfifo(
+	.srst(!rst_n),
+	.clk(clk),
+	.din({in_gac_axis_tuser, in_gac_axis_tkeep}),
+	.rd_en(gac_dfifo_rd),
+	.wr_en(in_gac_data_wr),
+	.dout({gac_tfifo_axis_tuser,gac_tfifo_axis_tkeep}),
+	.data_count(gac_dfifo_usedw),
+	.empty(gac_dfifo_empty),
+	.full()
+
+);
+
+fifo_1_256  gac_vfifo(
     .srst(!rst_n),
     .clk(clk),
     .din(in_gac_valid),
@@ -568,38 +603,21 @@ fifo_134_1024  gac_dfifo(
        .empty(MD_fifo_empty),
        .full(out_gac_md_alf)
    
-       );
-fifo_1024_256  PHV_fifo(
-	.srst(!rst_n),
-	.clk(clk),
-	.din(in_gac_phv),
-	.rd_en(PHV_fifo_rd),
-	.wr_en(in_gac_phv_wr),
-	.dout(PHV_fifo_rdata),
-	.data_count(),
-	.empty(PHV_fifo_empty),
-	.full(out_gac_phv_alf)
+);
+// fifo_1024_256  PHV_fifo(
+// 	.srst(!rst_n),
+// 	.clk(clk),
+// 	.din(in_gac_phv),
+// 	.rd_en(PHV_fifo_rd),
+// 	.wr_en(in_gac_phv_wr),
+// 	.dout(PHV_fifo_rdata),
+// 	.data_count(),
+// 	.empty(PHV_fifo_empty),
+// 	.full(out_gac_phv_alf)
 
-	);
+// 	);
 	
 
-	
- //***************************************************
-//                 out_gac_phv_count
-//***************************************************
-always @(posedge clk or negedge rst_n) begin
-    if(rst_n == 1'b0 ) begin
-	    out_gac_phv_count <= 32'b0;	 
-	 end
-	 else begin
-	    if(out_gac_phv_wr == 1'b1 ) begin
-		    out_gac_phv_count <= out_gac_phv_count + 32'b1; 
-	    end
-		else begin
-		    out_gac_phv_count <= out_gac_phv_count; 
-		end	     
-	 end	 
-end
 
  //***************************************************
 //                 out_gac_data_count

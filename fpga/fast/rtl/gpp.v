@@ -60,6 +60,7 @@ module gpp #(
     output reg out_gpp_valid_wr,
     output reg out_gpp_valid,
     output reg [1:0]  out_gpp_axis_tuser,
+    //TODO tkeep is sent to DataCache not GKE
     output reg [31:0] out_gpp_axis_tkeep,
     input in_gpp_data_alf,     //data alf
     
