@@ -84,8 +84,6 @@ wire [1023:0] gpp2gke_phv;
 wire gpp2gke_phv_wr;
 wire gke2gpp_md_alf;
 wire gke2gpp_phv_alf;
-wire [1:0]   gpp2gke_tuser;
-wire [31:0]  gpp2gke_tkeep;
 
 //GPP to Data_cache
 wire gpp2data_cache_data_wr;
@@ -119,12 +117,12 @@ wire [31:0] data_cache2gac_tkeep;
 //GAC to GOE 
 wire [255:0] gac2goe_data;
 wire gac2goe_data_wr;
-wire [1023:0] gac2goe_phv;
-wire gac2goe_phv_wr;
+//wire [1023:0] gac2goe_phv;
+//wire gac2goe_phv_wr;
 wire gac2goe_valid;
 wire gac2goe_valid_wr;
 wire goe2gac_alf;
-wire goe2gac_phv_alf;
+//wire goe2gac_phv_alf;
 wire [1:0]  gac2goe_tuser;
 wire [31:0] gac2goe_tkeep;
 
@@ -456,7 +454,10 @@ gpp #(
     .pktin_data(pktin_data),
     .pktin_valid_wr(pktin_data_valid_wr),
     .pktin_data_valid(pktin_data_valid),
+    .tx_axis_tuser_in(pktin_axis_tuser),
+    .tx_axis_tkeep_in(pktin_axis_tkeep),
     .pktin_ready(pktin_ready),
+
 //parse key which transmit to gke
     .out_gpp_phv(gpp2gke_phv),
 	.out_gpp_phv_wr(gpp2gke_phv_wr),
@@ -465,11 +466,14 @@ gpp #(
     .out_gpp_md(gpp2gke_md),
     .out_gpp_md_wr(gpp2gke_md_wr),
     .in_gpp_md_alf(gke2gpp_md_alf),	
+
 //transport to next module
     .out_gpp_data_wr(gpp2data_cache_data_wr),
     .out_gpp_data(gpp2data_cache_data),
     .out_gpp_valid_wr(gpp2data_cache_valid_wr),
     .out_gpp_valid(gpp2data_cache_valid),
+    .out_gpp_axis_tuser(gpp2data_cache_tuser),
+    .out_gpp_axis_tkeep(gpp2data_cache_tkeep),
 	.in_gpp_data_alf(data_cache2gpp_alf),
 	
 //localbus to gpp
@@ -638,6 +642,8 @@ gac #(
     .in_gac_data(data_cache2gac_data),
     .in_gac_valid_wr(data_cache2gac_valid_wr),
     .in_gac_valid(data_cache2gac_valid),
+    .in_gac_axis_tuser(data_cache2gac_tuser),
+    .in_gac_axis_tkeep(data_cache2gac_tkeep),
     .out_gac_data_alf(gac2data_cache_alf),
 	
 //user cfg require
@@ -653,11 +659,13 @@ gac #(
     .out_gac_data_wr(gac2goe_data_wr),
     .out_gac_valid(gac2goe_valid),
 	.out_gac_valid_wr(gac2goe_valid_wr),
+    .out_gac_axis_tuser(gac2goe_tuser),
+    .out_gac_axis_tkeep(gac2goe_tkeep),
 	.in_gac_alf(goe2gac_alf),
 	
-	.out_gac_phv(gac2goe_phv),
-	.out_gac_phv_wr(gac2goe_phv_wr),
-	.in_gac_phv_alf(goe2gac_phv_alf),
+	//.out_gac_phv(gac2goe_phv),
+	//.out_gac_phv_wr(gac2goe_phv_wr),
+	//.in_gac_phv_alf(goe2gac_phv_alf),
 	
 	.cin_gac_data(cout_gme_data),
 	.cin_gac_data_wr(cout_gme_data_wr),
@@ -679,6 +687,8 @@ goe #(
     .in_goe_data_wr(gac2goe_data_wr),
 	.in_goe_valid(gac2goe_valid),
     .in_goe_valid_wr(gac2goe_valid_wr),
+    .in_goe_axis_tuser(gac2goe_tuser),
+    .in_goe_axis_tkeep(gac2goe_tkeep),
 	.out_goe_alf(goe2gac_alf),
 	
 	.in_goe_phv(gac2goe_phv),
@@ -689,6 +699,9 @@ goe #(
     .pktout_data(pktout_data),
     .pktout_data_valid_wr(pktout_data_valid_wr),
     .pktout_data_valid(pktout_data_valid),
+    .pktout_axis_tuser(tx_axis_tuser_out),
+    .pktout_axis_tkeep(tx_axis_tkeep_out),
+
     .pktout_ready(pktout_ready),
 
 //localbus to goe	

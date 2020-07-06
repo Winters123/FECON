@@ -321,7 +321,7 @@ always @(posedge clk or negedge rst_n) begin
                 gac_dfifo_rd <= 1'b0;
 		        // PHV_fifo_rd  <= 1'b0;
 		        MD_fifo_rd   <= 1'b0;  
-		     //   gac_ram_rd <= 1'b0;
+		        // gac_ram_rd <= 1'b0;
 				gac_address <= 8'b0;			  
                 out_gac_valid_wr <= 1'b0;
 				out_gac_valid<=1'b0;

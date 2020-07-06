@@ -19,9 +19,9 @@
 //                     Revision List
 //*************************************************************
 //	rn1: 
-//      date:  2018/07/17
-//      modifier: 
-//      description: 
+//      date:  2020/07/06
+//      modifier: Yang Xiangrui
+//      description: change from 134bit to 256bit
 ///////////////////////////////////////////////////////////////// 
 
 `timescale  1 ns / 1 ps
@@ -33,16 +33,20 @@ module data_cache #(
 	
 //pkt from gpp
     input in_data_cache_data_wr,
-    input [133:0] in_data_cache_data,
+    input [255:0] in_data_cache_data,
     input in_data_cache_valid_wr,
     input in_data_cache_valid,
+	input [1:0] in_data_cache_tuser,
+	input [31:0] in_data_cache_tkeep,
     output out_data_cache_alf,
 	
 //transport to gda module     
     output reg out_data_cache_data_wr,
-    output reg [133:0] out_data_cache_data,
+    output reg [255:0] out_data_cache_data,
     output reg out_data_cache_valid_wr,
     output reg out_data_cache_valid,
+	output reg [1:0] out_data_cache_tuser,
+	output reg [31:0] out_data_cache_tkeep,
     input in_data_cache_alf,
 
 	
@@ -65,12 +69,15 @@ reg  [31:0] out_cache_data_count;    //out data_cache data count
 
 
 reg pkt_dfifo_rd;
-wire [133:0] pkt_dfifo_rdata;
+wire [255:0] pkt_dfifo_rdata;
 wire [9:0] pkt_dfifo_usedw;
 
 reg pkt_vfifo_rd;
 wire pkt_vfifo_rdata;
 wire pkt_vfifo_empty;
+
+wire [31:0] pkt_axis_tkeep_rdata;
+wire[1:0] pkt_axis_tuser_rdata;
 
 assign out_data_cache_alf = pkt_dfifo_usedw[9];
 //***********************************
@@ -81,12 +88,15 @@ reg [1:0] data_cache_state;
 localparam  IDLE_S = 2'd1,
             SEND_S = 2'd2,
             DISCARD_S = 2'd3;
+
 always @(posedge clk or negedge rst_n) begin 
     if(rst_n == 1'b0) begin         
         out_data_cache_data_wr <= 1'b0;
-        out_data_cache_data <= 134'b0;
+        out_data_cache_data <= 256'b0;
         out_data_cache_valid_wr <= 1'b0;
 		out_data_cache_valid <= 1'b0;
+		out_data_cache_tkeep <= 32'b0;
+		out_data_cache_tuser <= 2'b0;
         pkt_dfifo_rd <= 1'b0;
         pkt_vfifo_rd <= 1'b0;
         data_cache_state <= IDLE_S;
@@ -126,9 +136,11 @@ always @(posedge clk or negedge rst_n) begin
                 pkt_vfifo_rd <= 1'b0;
                 out_data_cache_data_wr <= 1'b1;
                 out_data_cache_data <= pkt_dfifo_rdata;
-                if(pkt_dfifo_rdata[133:132] == 2'b10)begin 
+				out_data_cache_tkeep <= pkt_axis_tkeep_rdata;
+				out_data_cache_tuser <= pkt_axis_tuser_rdata;
+                if(pkt_axis_tuser_rdata[1:0] == 2'b10)begin 
                     pkt_dfifo_rd <= 1'b0;
-						out_data_cache_valid  <= 1'b1;
+					out_data_cache_valid  <= 1'b1;
                     out_data_cache_valid_wr <= 1'b1;
                     data_cache_state <= IDLE_S;
                 end
@@ -142,11 +154,13 @@ always @(posedge clk or negedge rst_n) begin
             
             DISCARD_S: begin 
                 pkt_vfifo_rd <= 1'b0;
-				out_data_cache_data <= 134'b0;
+				out_data_cache_data <= 256'b0;
                 out_data_cache_data_wr <= 1'b0;
 				out_data_cache_valid <= 1'b0;
                 out_data_cache_valid_wr <= 1'b0;
-                if(pkt_dfifo_rdata[133:132] == 2'b10) begin
+				out_data_cache_tkeep <= 32'b0;
+				out_data_cache_tuser <= 2'b0;
+                if(pkt_axis_tuser_rdata[1:0] == 2'b10) begin
                     pkt_dfifo_rd <= 1'b0;
                     data_cache_state <= IDLE_S;
                 end
@@ -158,9 +172,12 @@ always @(posedge clk or negedge rst_n) begin
             
             default: begin 
                 out_data_cache_data_wr <= 1'b0;
-                out_data_cache_data <= 134'b0;
+                out_data_cache_data <= 256'b0;
 				out_data_cache_valid <= 1'b0;
                 out_data_cache_valid_wr <= 1'b0;
+				out_data_cache_tkeep <= 32'b0;
+				out_data_cache_tuser <= 2'b0;
+
                 pkt_dfifo_rd <= 1'b0;
                 pkt_vfifo_rd <= 1'b0;
                 data_cache_state <= IDLE_S;
@@ -174,6 +191,7 @@ end
 //likely fifo/ram/async block.... 
 //should be instantiated below here              
 
+ //TODO switch this FIFO from 134 to 256.
  fifo_134_1024  pkt_dfifo(
 	.srst(!rst_n),
 	.clk(clk),
@@ -199,6 +217,19 @@ fifo_1_256  pkt_vfifo(
 	.full()
 
 	);
+
+//TODO need to inialize this FIFO
+fifo_34_1024 pkt_axi_fifo(
+	.srst(!rst_n),
+	.clk(clk),
+	.din({in_data_cache_tkeep, in_data_cache_tuser}),
+	.rd_en(pkt_dfifo_rd),
+	.wr_en(in_data_cache_data_wr),
+	.dout({pkt_axis_tkeep_rdata, pkt_axis_tuser_rdata}),
+	.data_count(),
+	.empty(),
+	.full()
+);
 	
 //***************************************************
 //                 in_cache_data_count

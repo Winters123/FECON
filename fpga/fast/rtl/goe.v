@@ -144,7 +144,8 @@ always @(posedge clk or negedge rst_n) begin
 			    write_en<=1'b0;
 			    if(in_goe_data_wr==1'b1 && in_goe_axis_tuser[1:0]==2'b01)begin
 			        write_en<=in_goe_data[108];
-        	        in_stream_data_wr <= ~in_goe_data[108]; 
+					//whether we are storing or discarding depends on this bit.
+        	        in_stream_data_wr <= ~in_goe_data[108];
         	        in_stream_data <= in_goe_data; 
         	        del_state<=del_trans;			
         	    end
@@ -584,15 +585,3 @@ fifo_1_128  stream_valid(
 	.full()
 );	  	   
 endmodule                
-                   
-
-
-
-
-
-
-
-
-
-    
-    

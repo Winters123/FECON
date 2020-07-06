@@ -192,11 +192,11 @@ always @(posedge clk or negedge rst_n) begin
 			MD_fifo_rd<=1'b0;
             out_gme_md <= 256'b0;
             out_gme_md_wr <= 1'b0;
-			md_flag<=1'b0;
+			md_flag <= 1'b0;
 			PHV_fifo_rd <= 1'b0;
             out_gme_phv <= 1024'b0;	
-		    out_gme_phv_wr<=1'b0;
-			out_gme_md_reg<=256'b0;
+		    out_gme_phv_wr <= 1'b0;
+			out_gme_md_reg <= 256'b0;
 			
             address_a <= 8'b0;
 		    data_a <= 32'b0;
