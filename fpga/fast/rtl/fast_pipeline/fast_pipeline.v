@@ -87,6 +87,9 @@ module fast_pipeline #(
 
 );
 
+//TODO UM instances should be declaired here
+
+//TODO initialize metadata wrappers here
 
 
 endmodule

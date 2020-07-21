@@ -385,7 +385,8 @@ end
 //should be instantiated below here
 
 
-//TODO cannot quite understand what are you doing here
+//this 32x256 ram is a flow counter table for counts pkt num of
+//each flow (by index(addr)).
 ram_32_256 gme_ram_inst
 (      
     .clka(clk),
